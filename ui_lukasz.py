@@ -56,11 +56,9 @@ def pokaz_dashboard():
     
     if not df_dzis.empty:
         with f_col2:
-            # PRO FEATURE: Szybkie filtrowanie
             unikalne_statusy = df_dzis['Status'].unique().tolist()
             wybrane_statusy = st.multiselect("Filtruj status:", unikalne_statusy, default=unikalne_statusy, label_visibility="collapsed")
         
-        # Aplikowanie filtra
         df_dzis_filtered = df_dzis[df_dzis['Status'].isin(wybrane_statusy)].copy()
         
         df_dzis_filtered['Data_sort'] = pd.to_datetime(df_dzis_filtered['Data'], format='%Y-%m-%d', errors='coerce')
@@ -90,7 +88,6 @@ def pokaz_dashboard():
         col_w1, col_w2, col_puste = st.columns([1, 1, 1])
         with col_w1:
             st.markdown('<div class="table-header" style="font-size: 0.9rem;">Rozkład Działów</div>', unsafe_allow_html=True)
-            # Dodano inner-text i grubszą obwódkę
             fig1 = px.pie(df_dzis, names='Dział', hole=0.65, template="plotly_white")
             fig1.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
             fig1.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=False, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", annotations=[dict(text='Działy', x=0.5, y=0.5, font_size=16, showarrow=False)])
@@ -135,7 +132,6 @@ def pokaz_formularz():
             nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, typ_akcji, nr_projektu, klient, lokalizacja, kontakt, auto, status, wykonawca]
             database.dodaj_zadanie(nowy_wiersz)
             
-            # PRO FEATURE: Nowoczesny pop-up zamiast zielonego bloku
             st.toast(f"✅ Dodano zadanie! Przypisano do: {wykonawca}", icon="🚀")
             st.cache_resource.clear()
 
@@ -150,15 +146,15 @@ def pokaz_zarzadzanie():
         df['Data_sort'] = pd.to_datetime(df['Data'], format='%Y-%m-%d', errors='coerce')
         df = df.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
         
-        # PRO FEATURE: Pasek wyszukiwania ułatwiający znalezienie zlecenia
         wyszukiwarka = st.text_input("🔍 Szukaj po nazwie klienta lub projekcie...", "")
         
-        lista_opcji = df['ID'].astype(str) + " | " + df['Data'].astype(str) + " | " + df['Klient'].astype(str) + " - " + df['Typ Akcji'].astype(str)
+        # POPRAWKA: Zamiana z Pandas Series na listę pythona poprzez .tolist()
+        lista_opcji = (df['ID'].astype(str) + " | " + df['Data'].astype(str) + " | " + df['Klient'].astype(str) + " - " + df['Typ Akcji'].astype(str)).tolist()
         
         if wyszukiwarka:
             lista_opcji = [opcja for opcja in lista_opcji if wyszukiwarka.lower() in opcja.lower()]
             
-        if not lista_opcji:
+        if len(lista_opcji) == 0:
             st.warning("Brak wyników wyszukiwania.")
             return
             
@@ -270,7 +266,6 @@ def pokaz_magazyn():
     df_wydania = df_dzien[df_dzien['Typ Akcji'].isin(wydania_typy)]
     df_przyjecia = df_dzien[df_dzien['Typ Akcji'].isin(przyjecia_typy)]
 
-    # PRO FEATURE: Paski postępu dla operacji magazynowych
     st.markdown('<br>', unsafe_allow_html=True)
     prog_col1, prog_col2 = st.columns(2)
     
@@ -297,7 +292,6 @@ def pokaz_magazyn():
             st.info("Brak wydań tego dnia.")
         else:
             for _, row in df_wydania.iterrows():
-                # Wyszarzanie zakończonych zadań
                 opacity = "0.5" if row['Status'] == 'Zakończone' else "1"
                 st.markdown(f"""
                 <div class="card-container" style="opacity: {opacity}; display:block; padding:15px; border-left: 5px solid #e67e22; margin-bottom:15px;">
