@@ -24,10 +24,11 @@ def pokaz_dashboard():
     zakonczone = len(df_dzis[df_dzis['Status'] == 'Zakończone'])
     
     c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Wszystkie zlecenia</div><div class="kpi-value" style="color: #58a6ff;">{wszystkie}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Nowe</div><div class="kpi-value" style="color: #ff7b72;">{nowe}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="kpi-card"><div class="kpi-title">W trakcie</div><div class="kpi-value" style="color: #d2a8ff;">{w_trakcie}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
-    c4.markdown(f'<div class="kpi-card"><div class="kpi-title">Zakończone</div><div class="kpi-value" style="color: #3fb950;">{zakonczone}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
+    # Zmieniono kolory wartości na ciemny szary (#0f172a) z mniejszymi ikonami
+    c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Wszystkie zlecenia</div><div class="kpi-value">{wszystkie}</div><div class="kpi-title" style="color:#3b82f6;">🗓️ Dzisiaj</div></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Nowe</div><div class="kpi-value">{nowe}</div><div class="kpi-title" style="color:#ef4444;">🔥 Dzisiaj</div></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi-card"><div class="kpi-title">W trakcie</div><div class="kpi-value">{w_trakcie}</div><div class="kpi-title" style="color:#f59e0b;">🚚 Dzisiaj</div></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi-card"><div class="kpi-title">Zakończone</div><div class="kpi-value">{zakonczone}</div><div class="kpi-title" style="color:#10b981;">✅ Dzisiaj</div></div>', unsafe_allow_html=True)
     
     st.markdown("<br><br>", unsafe_allow_html=True)
     
@@ -35,17 +36,18 @@ def pokaz_dashboard():
     st.subheader(f"Zlecenia na dziś ({dzis})")
     
     def koloruj_statusy(val):
-        if val == 'Zakończone': return 'background-color: rgba(63, 185, 80, 0.15); color: #3fb950; font-weight: bold;'
-        elif val == 'W drodze': return 'background-color: rgba(210, 168, 255, 0.15); color: #d2a8ff; font-weight: bold;'
-        elif val == 'Nowe': return 'background-color: rgba(255, 123, 114, 0.15); color: #ff7b72; font-weight: bold;'
-        elif val == 'Awizacja': return 'background-color: rgba(139, 148, 158, 0.15); color: #8b949e; font-weight: bold;'
+        # Nowe kolory dopasowane do Jasnego UI (pastelowe tła, mocny tekst)
+        if val == 'Zakończone': return 'background-color: #d1fae5; color: #059669; font-weight: 600;'
+        elif val == 'W drodze': return 'background-color: #fef3c7; color: #d97706; font-weight: 600;'
+        elif val == 'Nowe': return 'background-color: #fee2e2; color: #dc2626; font-weight: 600;'
+        elif val == 'Awizacja': return 'background-color: #f1f5f9; color: #475569; font-weight: 600;'
         return ''
         
     if not df_dzis.empty:
         df_dzis['Data_sort'] = pd.to_datetime(df_dzis['Data'], format='%Y-%m-%d', errors='coerce')
         df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
         
-        # KULOODPORNE KOLOROWANIE (niezależne od wersji Pandas na serwerze)
+        # Kuloodporne kolorowanie (map vs applymap)
         try:
             tabela_style = df_dzis.style.map(koloruj_statusy, subset=['Status'])
         except AttributeError:
@@ -62,14 +64,16 @@ def pokaz_dashboard():
         col_w1, col_w2, col_puste = st.columns([1, 1, 1])
         with col_w1:
             st.markdown("**Zlecenia wg typu**")
-            fig1 = px.pie(df_dzis, names='Typ Akcji', hole=0.7, template="plotly_dark")
+            # Zmieniono szablon z plotly_dark na plotly_white
+            fig1 = px.pie(df_dzis, names='Typ Akcji', hole=0.7, template="plotly_white")
             fig1.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=True, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig1, use_container_width=True)
             
         with col_w2:
             st.markdown("**Zlecenia wg statusu**")
-            fig2 = px.pie(df_dzis, names='Status', hole=0.7, template="plotly_dark", color='Status',
-                          color_discrete_map={'Zakończone':'#3fb950', 'W drodze':'#d2a8ff', 'Nowe':'#ff7b72', 'Awizacja':'#8b949e'})
+            # Zmieniono szablon i dostosowano paletę
+            fig2 = px.pie(df_dzis, names='Status', hole=0.7, template="plotly_white", color='Status',
+                          color_discrete_map={'Zakończone':'#10b981', 'W drodze':'#f59e0b', 'Nowe':'#ef4444', 'Awizacja':'#64748b'})
             fig2.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=True, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig2, use_container_width=True)
 
