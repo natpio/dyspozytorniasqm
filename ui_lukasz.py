@@ -54,7 +54,8 @@ def pokaz_tabele_i_zarzadzanie():
             elif val == 'Awizacja': return 'background-color: #6c757d; color: white;'
             return ''
             
-        st.dataframe(df.style.map(koloruj_statusy, subset=['Status']), use_container_width=True, hide_index=True)
+        # Zmiana z map na applymap dla zgodności ze starszymi wersjami Pandas
+        st.dataframe(df.style.applymap(koloruj_statusy, subset=['Status']), use_container_width=True, hide_index=True)
         
         st.markdown("---")
         st.subheader("⚙️ Panel Zarządzania Zadaniami (Edycja / Usuwanie / Archiwum)")
