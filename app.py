@@ -10,15 +10,20 @@ st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
-# --- CSS z Twojego wspaniałego projektu ---
+# --- CSS Z ANIMOWANYM TŁEM I NOWOCZESNYM UI ---
 local_css_string = """
-/* Globalne tło głównego panelu - jasnoszara siatka */
+/* Animacja dla tła */
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Globalne tło głównego panelu - Animowany Pływający Gradient */
 .main {
-    background-color: #f7f9fc;
-    background-image: 
-        linear-gradient(90deg, rgba(200,200,200,0.1) 1px, transparent 1px),
-        linear-gradient(rgba(200,200,200,0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
+    background: linear-gradient(-45deg, #f4f7f9, #e6eef7, #dce6f5, #f0f4f8);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
     color: #333333;
 }
 
@@ -130,10 +135,10 @@ else:
         if uzytkownik == "Łukasz":
             wybor = st.radio("Nawigacja", [
                 "⚙️ Dashboard", 
-                "➕ Nowe Zlecenie", 
-                "🏭 Panel Magazynu", 
-                "🛠️ Zarządzanie Bazą", 
-                "📂 Archiwum"
+                "➕ Nowy Wpis", 
+                "🏭 Logistyka Magazynowa", 
+                "🛠️ Konsola Administracyjna", 
+                "📂 Archiwum Cyfrowe"
             ], label_visibility="collapsed")
         elif uzytkownik == "Dawid":
             wybor = st.radio("Nawigacja", [
@@ -173,13 +178,13 @@ else:
         
         if wybor == "⚙️ Dashboard":
             ui_lukasz.pokaz_dashboard()
-        elif wybor == "➕ Nowe Zlecenie":
+        elif wybor == "➕ Nowy Wpis":
             ui_lukasz.pokaz_formularz()
-        elif wybor == "🏭 Panel Magazynu":
+        elif wybor == "🏭 Logistyka Magazynowa":
             ui_lukasz.pokaz_magazyn()
-        elif wybor == "🛠️ Zarządzanie Bazą":
+        elif wybor == "🛠️ Konsola Administracyjna":
             ui_lukasz.pokaz_zarzadzanie()
-        elif wybor == "📂 Archiwum":
+        elif wybor == "📂 Archiwum Cyfrowe":
             ui_lukasz.pokaz_archiwum()
             
     elif uzytkownik == "Dawid":
