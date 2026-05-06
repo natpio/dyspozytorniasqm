@@ -3,13 +3,12 @@ from streamlit_autorefresh import st_autorefresh
 import ui_lukasz
 import ui_dawid
 
-# --- KONFIGURACJA STRONY (Musi być pierwsza) ---
+# --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="SQM Dispatch", layout="wide", initial_sidebar_state="expanded")
 
-# --- STYLE CSS (Light Theme - Czysty wygląd) ---
+# --- STYLE CSS ---
 st.markdown("""
 <style>
-/* Stylowanie kart KPI u Łukasza */
 div.kpi-card {
     background-color: #ffffff;
     border-radius: 12px;
@@ -29,7 +28,6 @@ div.kpi-value {
     font-weight: 700;
     color: #0f172a;
 }
-/* Przyciemnienie paska bocznego (jak na Twoim projekcie) */
 [data-testid="stSidebar"] {
     background-color: #0b1120 !important;
 }
@@ -39,11 +37,10 @@ div.kpi-value {
 </style>
 """, unsafe_allow_html=True)
 
-# Inicjalizacja sesji logowania
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
-# EKRAN LOGOWANIA
+# LOGOWANIE
 if st.session_state["zalogowany"] is None:
     st.title("🔐 SQM Dispatch - Logowanie")
     col1, col2 = st.columns([1, 3])
@@ -59,30 +56,30 @@ if st.session_state["zalogowany"] is None:
             else:
                 st.error("Błędny PIN!")
 
-# EKRAN PO ZALOGOWANIU
+# PO ZALOGOWANIU
 else:
     uzytkownik = st.session_state["zalogowany"]
     
-    # --- LEWY PASEK NAWIGACYJNY (SIDEBAR) ---
     with st.sidebar:
         st.markdown("### 📦 SQM DISPATCH")
         st.write(f"Zalogowano jako: **{uzytkownik}**")
         st.markdown("---")
         
-        # POPRAWIONA LOGIKA NAWIGACJI (Jedno menu zamiast dwóch)
         if uzytkownik == "Łukasz":
             st.markdown("**MENU**")
+            # TUTAJ MUSZĄ BYĆ 4 OPCJE:
             wybor = st.radio("Nawigacja", [
                 "🏠 Dashboard", 
                 "📝 Nowe Zlecenie", 
-                "⚙️ Zarządzanie Bazą"
+                "⚙️ Zarządzanie Bazą",
+                "📦 Archiwum"
             ], label_visibility="collapsed")
             
         elif uzytkownik == "Dawid":
             st.markdown("**MENU**")
             wybor = st.radio("Nawigacja", [
                 "📱 Moje Zlecenia", 
-                "🗺️ Mapa (Wkrótce)"
+                "🗺️ Mapa"
             ], label_visibility="collapsed")
         
         st.markdown("---")
@@ -90,7 +87,7 @@ else:
             st.session_state["zalogowany"] = None
             st.rerun()
 
-    # --- ROUTING (Przekierowania do odpowiednich ekranów) ---
+    # ROUTING
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=30000, limit=None, key="odswiezanie_lukasz")
         
@@ -100,6 +97,8 @@ else:
             ui_lukasz.pokaz_formularz()
         elif wybor == "⚙️ Zarządzanie Bazą":
             ui_lukasz.pokaz_zarzadzanie()
+        elif wybor == "📦 Archiwum":
+            ui_lukasz.pokaz_archiwum()
             
     elif uzytkownik == "Dawid":
         if wybor == "📱 Moje Zlecenia":
