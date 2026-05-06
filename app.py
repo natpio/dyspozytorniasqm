@@ -126,11 +126,12 @@ else:
         
         st.markdown('<div class="sidebar-menu-header">MENU</div>', unsafe_allow_html=True)
         
-        # Nawigacja Pythonowa (teraz CSS sprawi, że będzie wyglądać jak Twoje guziki)
+        # Nawigacja Pythonowa z ukrytymi radio buttonami przez CSS
         if uzytkownik == "Łukasz":
             wybor = st.radio("Nawigacja", [
                 "⚙️ Dashboard", 
                 "➕ Nowe Zlecenie", 
+                "🏭 Panel Magazynu", 
                 "🛠️ Zarządzanie Bazą", 
                 "📂 Archiwum"
             ], label_visibility="collapsed")
@@ -174,6 +175,8 @@ else:
             ui_lukasz.pokaz_dashboard()
         elif wybor == "➕ Nowe Zlecenie":
             ui_lukasz.pokaz_formularz()
+        elif wybor == "🏭 Panel Magazynu":
+            ui_lukasz.pokaz_magazyn()
         elif wybor == "🛠️ Zarządzanie Bazą":
             ui_lukasz.pokaz_zarzadzanie()
         elif wybor == "📂 Archiwum":
