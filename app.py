@@ -6,34 +6,35 @@ import ui_dawid
 # --- KONFIGURACJA STRONY (Musi być pierwsza) ---
 st.set_page_config(page_title="SQM Dispatch", layout="wide", initial_sidebar_state="expanded")
 
-# --- STYLE CSS (Dark Mode & Glassmorphism) ---
+# --- STYLE CSS (Light Theme - Czysty wygląd) ---
 st.markdown("""
 <style>
-/* Tło główne całej aplikacji */
-.stApp {
-    background-color: #0d1117; 
-}
 /* Stylowanie kart KPI u Łukasza */
 div.kpi-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 15px;
+    background-color: #ffffff;
+    border-radius: 12px;
     padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid #eef0f4;
     text-align: left;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
 }
 div.kpi-title {
     font-size: 0.9rem;
-    color: #8b949e;
-    margin-bottom: 10px;
+    color: #64748b;
+    margin-bottom: 5px;
     font-weight: 500;
 }
 div.kpi-value {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
     font-weight: 700;
-    color: #e6edf3;
+    color: #0f172a;
+}
+/* Przyciemnienie paska bocznego (jak na Twoim projekcie) */
+[data-testid="stSidebar"] {
+    background-color: #0b1120 !important;
+}
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
