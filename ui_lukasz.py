@@ -19,7 +19,7 @@ def pokaz_formularz():
         with col2:
             nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
             klient = st.text_input("Klient")
-            lokalizacja = st.text_input("Lokalizacja (adres - zostaw puste dla magazynu)")
+            lokalizacja = st.text_input("Lokalizacja (adres - puste dla magazynu)")
             kontakt = st.text_input("Kontakt (Imię / Telefon)")
 
         if st.form_submit_button("Zapisz Zadanie", type="primary"):
@@ -33,70 +33,81 @@ def pokaz_formularz():
                 kontakt, auto, status, wykonawca
             ]
             
-            try:
-                database.dodaj_zadanie(nowy_wiersz)
-                st.success(f"Zadanie zostało dodane! Wykonawca: {wykonawca}")
-                st.cache_resource.clear()
-            except Exception as e:
-                st.error(f"Wystąpił błąd: {e}")
-
-def pokaz_tabele():
-    st.header("Panel Dyspozytora - Podgląd Zadań")
-    
-    col_odswiez, col_puste = st.columns([1, 4])
-    with col_odswiez:
-        if st.button("🔄 Odśwież dane"):
+            database.dodaj_zadanie(nowy_wiersz)
+            st.success(f"Dodano zadanie! Wykonawca: {wykonawca}")
             st.cache_resource.clear()
-            st.rerun()
+
+def pokaz_tabele_i_zarzadzanie():
+    st.header("Podgląd i Zarządzanie Zadaniami")
 
     dane = database.pobierz_wszystkie_dane()
     if dane:
         df = pd.DataFrame(dane)
-        
-        # Sortowanie po dacie i godzinie
         df['Data_sort'] = pd.to_datetime(df['Data'], format='%Y-%m-%d', errors='coerce')
         df = df.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
         
-        # Pobieramy dzisiejszą datę
-        dzis = datetime.now().strftime("%Y-%m-%d")
-        
-        # Tworzymy pod-zakładki dla Łukasza
-        tab_dzis, tab_wszystkie = st.tabs(["📅 Dzisiejsze zadania", "🗄️ Pełny harmonogram (Wszystkie)"])
-        
-        # Funkcja do kolorowania statusów w tabeli Pandas
+        # --- TABELA ---
         def koloruj_statusy(val):
-            if val == 'Zakończone': return 'background-color: #198754; color: white;' # Zielony
-            elif val == 'W drodze': return 'background-color: #ffc107; color: black;' # Żółty
-            elif val == 'Nowe': return 'background-color: #0dcaf0; color: black;' # Błękitny
-            elif val == 'Awizacja': return 'background-color: #6c757d; color: white;' # Szary
+            if val == 'Zakończone': return 'background-color: #198754; color: white;'
+            elif val == 'W drodze': return 'background-color: #ffc107; color: black;'
+            elif val == 'Nowe': return 'background-color: #0dcaf0; color: black;'
+            elif val == 'Awizacja': return 'background-color: #6c757d; color: white;'
             return ''
-
-        with tab_dzis:
-            df_dzis = df[df['Data'] == dzis]
             
-            if not df_dzis.empty:
-                # Licznik postępów dla Łukasza
-                liczba_zakończonych = len(df_dzis[df_dzis['Status'] == 'Zakończone'])
-                liczba_wszystkich = len(df_dzis)
-                
-                st.metric(label="Wykonane zadania na dziś", value=f"{liczba_zakończonych} / {liczba_wszystkich}")
-                
-                # Wyświetlamy wystylizowaną tabelę tylko dla dzisiejszych zadań
-                st.dataframe(
-                    df_dzis.style.map(koloruj_statusy, subset=['Status']), 
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.info("Brak zaplanowanych zadań na dzisiejszy dzień.")
-                
-        with tab_wszystkie:
-            # Wyświetlamy wszystkie dane pogrupowane i wystylizowane
-            st.dataframe(
-                df.style.map(koloruj_statusy, subset=['Status']), 
-                use_container_width=True,
-                hide_index=True
-            )
+        st.dataframe(df.style.map(koloruj_statusy, subset=['Status']), use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        st.subheader("⚙️ Panel Zarządzania Zadaniami (Edycja / Usuwanie / Archiwum)")
+        
+        # Tworzymy listę wyboru zadań do edycji
+        lista_opcji = df['ID'].astype(str) + " | " + df['Data'] + " | " + df['Klient'] + " - " + df['Typ Akcji']
+        wybor = st.selectbox("Wybierz zadanie z listy, aby zarządzać:", ["-- Wybierz zadanie --"] + lista_opcji.tolist())
+        
+        if wybor != "-- Wybierz zadanie --":
+            wybrane_id = wybor.split(" | ")[0]
+            wiersz = df[df['ID'].astype(str) == wybrane_id].iloc[0]
             
+            with st.expander("✏️ Edytuj / Usuń / Archiwizuj to zadanie", expanded=True):
+                # Opcje szybkich akcji
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("📦 Przenieś do Archiwum", type="primary", use_container_width=True):
+                        database.archiwizuj_zadanie(wybrane_id)
+                        st.success("Zadanie przeniesione do Archiwum!")
+                        st.cache_resource.clear()
+                        st.rerun()
+                with c2:
+                    if st.button("🗑️ Usuń to zadanie bezpowrotnie", type="secondary", use_container_width=True):
+                        database.usun_zadanie(wybrane_id)
+                        st.error("Zadanie usunięte!")
+                        st.cache_resource.clear()
+                        st.rerun()
+                
+                st.write("lub edytuj dane:")
+                # Formularz edycji
+                with st.form("formularz_edycji"):
+                    e_k1, e_k2 = st.columns(2)
+                    with e_k1:
+                        # Pola ładujemy jako stringi dla ułatwienia bezpiecznej edycji
+                        n_data = st.text_input("Data (RRRR-MM-DD)", value=str(wiersz['Data']))
+                        n_godzina = st.text_input("Godzina", value=str(wiersz['Godzina']))
+                        n_dzial = st.selectbox("Dział", ["Rental", "Realizacja"], index=["Rental", "Realizacja"].index(wiersz['Dział']))
+                        n_klient = st.text_input("Klient", value=str(wiersz['Klient']))
+                    with e_k2:
+                        n_status = st.text_input("Status", value=str(wiersz['Status']))
+                        n_lokalizacja = st.text_input("Lokalizacja", value=str(wiersz['Lokalizacja']))
+                        n_kontakt = st.text_input("Kontakt", value=str(wiersz['Kontakt']))
+                        n_wykonawca = st.text_input("Wykonawca", value=str(wiersz['Wykonawca']))
+                    
+                    if st.form_submit_button("Zapisz Zmiany"):
+                        zaktualizowany_wiersz = [
+                            wiersz['ID'], n_data, n_godzina, n_dzial, wiersz['Typ Akcji'], 
+                            wiersz['Nr Projektu'], n_klient, n_lokalizacja, n_kontakt, 
+                            wiersz['Auto'], n_status, n_wykonawca
+                        ]
+                        database.edytuj_zadanie(wybrane_id, zaktualizowany_wiersz)
+                        st.success("Zmiany zapisane!")
+                        st.cache_resource.clear()
+                        st.rerun()
     else:
-        st.warning("Brak jakichkolwiek zadań w bazie.")
+        st.info("Brak zadań. Tabela jest pusta.")
