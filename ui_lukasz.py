@@ -24,22 +24,20 @@ def pokaz_dashboard():
     zakonczone = len(df_dzis[df_dzis['Status'] == 'Zakończone'])
     
     c1, c2, c3, c4 = st.columns(4)
-    # Zmieniono kolory wartości na ciemny szary (#0f172a) z mniejszymi ikonami
     c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Wszystkie zlecenia</div><div class="kpi-value">{wszystkie}</div><div class="kpi-title" style="color:#3b82f6;">🗓️ Dzisiaj</div></div>', unsafe_allow_html=True)
     c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Nowe</div><div class="kpi-value">{nowe}</div><div class="kpi-title" style="color:#ef4444;">🔥 Dzisiaj</div></div>', unsafe_allow_html=True)
     c3.markdown(f'<div class="kpi-card"><div class="kpi-title">W trakcie</div><div class="kpi-value">{w_trakcie}</div><div class="kpi-title" style="color:#f59e0b;">🚚 Dzisiaj</div></div>', unsafe_allow_html=True)
     c4.markdown(f'<div class="kpi-card"><div class="kpi-title">Zakończone</div><div class="kpi-value">{zakonczone}</div><div class="kpi-title" style="color:#10b981;">✅ Dzisiaj</div></div>', unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # --- 2. TABELA DZISIEJSZYCH ZLECEŃ ---
     st.subheader(f"Zlecenia na dziś ({dzis})")
     
     def koloruj_statusy(val):
-        # Nowe kolory dopasowane do Jasnego UI (pastelowe tła, mocny tekst)
         if val == 'Zakończone': return 'background-color: #d1fae5; color: #059669; font-weight: 600;'
         elif val == 'W drodze': return 'background-color: #fef3c7; color: #d97706; font-weight: 600;'
-        elif val == 'Nowe': return 'background-color: #fee2e2; color: #dc2626; font-weight: 600;'
+        elif val == 'Nowe': return 'background-color: #fee2e red; color: #dc2626; font-weight: 600;'
         elif val == 'Awizacja': return 'background-color: #f1f5f9; color: #475569; font-weight: 600;'
         return ''
         
@@ -47,7 +45,6 @@ def pokaz_dashboard():
         df_dzis['Data_sort'] = pd.to_datetime(df_dzis['Data'], format='%Y-%m-%d', errors='coerce')
         df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
         
-        # Kuloodporne kolorowanie (map vs applymap)
         try:
             tabela_style = df_dzis.style.map(koloruj_statusy, subset=['Status'])
         except AttributeError:
@@ -55,32 +52,10 @@ def pokaz_dashboard():
             
         st.dataframe(tabela_style, use_container_width=True, hide_index=True)
     else:
-        st.info("Odpoczywamy! Brak zleceń na dzisiaj.")
-        
-    st.markdown("<br><br>", unsafe_allow_html=True)
-
-    # --- 3. WYKRESY KOŁOWE ---
-    if not df_dzis.empty:
-        col_w1, col_w2, col_puste = st.columns([1, 1, 1])
-        with col_w1:
-            st.markdown("**Zlecenia wg typu**")
-            # Zmieniono szablon z plotly_dark na plotly_white
-            fig1 = px.pie(df_dzis, names='Typ Akcji', hole=0.7, template="plotly_white")
-            fig1.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=True, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig1, use_container_width=True)
-            
-        with col_w2:
-            st.markdown("**Zlecenia wg statusu**")
-            # Zmieniono szablon i dostosowano paletę
-            fig2 = px.pie(df_dzis, names='Status', hole=0.7, template="plotly_white", color='Status',
-                          color_discrete_map={'Zakończone':'#10b981', 'W drodze':'#f59e0b', 'Nowe':'#ef4444', 'Awizacja':'#64748b'})
-            fig2.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=True, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig2, use_container_width=True)
-
+        st.info("Brak zleceń na dzisiaj.")
 
 def pokaz_formularz():
     st.header("📝 Dodaj nowe zlecenie")
-    st.write("Wypełnij formularz, aby dodać zadanie do bazy.")
     with st.form("nowe_zadanie_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -90,68 +65,58 @@ def pokaz_formularz():
             typ_akcji = st.selectbox("Typ Akcji", ["Dowóz do klienta", "Odbiór od klienta", "Magazyn - Odbiór osobisty przez klienta", "Magazyn - Zwrot osobisty przez klienta"])
             auto = st.selectbox("Auto", ["Brak", "Bus 1 (Renault)", "Bus 2 (Peugeot)"])
         with col2:
-            nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
+            nr_projektu = st.text_input("Nr Projektu")
             klient = st.text_input("Klient")
-            lokalizacja = st.text_input("Lokalizacja (adres - puste dla magazynu)")
-            kontakt = st.text_input("Kontakt (Imię / Telefon)")
+            lokalizacja = st.text_input("Lokalizacja")
+            kontakt = st.text_input("Kontakt")
 
         if st.form_submit_button("Zapisz Zlecenie", type="primary"):
             id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
             wykonawca = "Łukasz (Magazyn)" if "Magazyn" in typ_akcji else "Dawid"
             status = "Awizacja" if "Magazyn" in typ_akcji else "Nowe"
-
             nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, typ_akcji, nr_projektu, klient, lokalizacja, kontakt, auto, status, wykonawca]
             database.dodaj_zadanie(nowy_wiersz)
-            st.success(f"Dodano zadanie! Wykonawca: {wykonawca}")
+            st.success("Zadanie dodane pomyślnie!")
             st.cache_resource.clear()
 
 def pokaz_zarzadzanie():
-    st.header("⚙️ Zarządzanie Bazą Danych")
-    st.info("Tutaj możesz edytować, usuwać i archiwizować wszystkie zadania w systemie.")
-    
+    st.header("⚙️ Zarządzanie Bazą")
     dane = database.pobierz_wszystkie_dane()
     if dane:
         df = pd.DataFrame(dane)
-        df['Data_sort'] = pd.to_datetime(df['Data'], format='%Y-%m-%d', errors='coerce')
-        df = df.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
-        
-        lista_opcji = df['ID'].astype(str) + " | " + df['Data'] + " | " + df['Klient'] + " - " + df['Typ Akcji']
-        wybor = st.selectbox("Wybierz zadanie z listy, aby zarządzać:", ["-- Wybierz zadanie --"] + lista_opcji.tolist())
+        lista_opcji = df['ID'].astype(str) + " | " + df['Data'].astype(str) + " | " + df['Klient'].astype(str)
+        wybor = st.selectbox("Wybierz zadanie do edycji/archiwizacji:", ["-- Wybierz zadanie --"] + lista_opcji.tolist())
         
         if wybor != "-- Wybierz zadanie --":
             wybrane_id = wybor.split(" | ")[0]
-            wiersz = df[df['ID'].astype(str) == wybrane_id].iloc[0]
             
-            with st.form("formularz_edycji"):
-                e_k1, e_k2 = st.columns(2)
-                with e_k1:
-                    n_data = st.text_input("Data (RRRR-MM-DD)", value=str(wiersz['Data']))
-                    n_godzina = st.text_input("Godzina", value=str(wiersz['Godzina']))
-                    n_dzial = st.selectbox("Dział", ["Rental", "Realizacja"], index=["Rental", "Realizacja"].index(wiersz['Dział']))
-                    n_klient = st.text_input("Klient", value=str(wiersz['Klient']))
-                with e_k2:
-                    n_status = st.text_input("Status", value=str(wiersz['Status']))
-                    n_lokalizacja = st.text_input("Lokalizacja", value=str(wiersz['Lokalizacja']))
-                    n_kontakt = st.text_input("Kontakt", value=str(wiersz['Kontakt']))
-                    n_wykonawca = st.text_input("Wykonawca", value=str(wiersz['Wykonawca']))
-                
-                if st.form_submit_button("Zapisz Zmiany"):
-                    zaktualizowany_wiersz = [wiersz['ID'], n_data, n_godzina, n_dzial, wiersz['Typ Akcji'], wiersz['Nr Projektu'], n_klient, n_lokalizacja, n_kontakt, wiersz['Auto'], n_status, n_wykonawca]
-                    database.edytuj_zadanie(wybrane_id, zaktualizowany_wiersz)
-                    st.success("Zmiany zapisane!")
-                    st.cache_resource.clear()
-                    st.rerun()
-
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("📦 Przenieś do Archiwum", type="primary", use_container_width=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📦 Przenieś do Archiwum", use_container_width=True, type="primary"):
                     database.archiwizuj_zadanie(wybrane_id)
+                    st.success("Przeniesiono do archiwum!")
                     st.cache_resource.clear()
                     st.rerun()
-            with c2:
-                if st.button("🗑️ Usuń to zadanie bezpowrotnie", type="secondary", use_container_width=True):
+            with col2:
+                if st.button("🗑️ Usuń na zawsze", use_container_width=True):
                     database.usun_zadanie(wybrane_id)
+                    st.warning("Usunięto z bazy!")
                     st.cache_resource.clear()
                     st.rerun()
     else:
-        st.info("Brak zadań w bazie.")
+        st.info("Brak aktywnych zadań.")
+
+def pokaz_archiwum():
+    st.header("📦 Archiwum Zleceń")
+    st.write("Lista wszystkich zarchiwizowanych zadań.")
+    
+    if st.button("🔄 Odśwież listę"):
+        st.cache_resource.clear()
+        st.rerun()
+        
+    dane_arch = database.pobierz_archiwum()
+    if dane_arch:
+        df_arch = pd.DataFrame(dane_arch)
+        st.dataframe(df_arch, use_container_width=True, hide_index=True)
+    else:
+        st.info("Archiwum jest puste.")
