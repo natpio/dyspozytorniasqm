@@ -69,16 +69,21 @@ else:
         st.write(f"Zalogowano jako: **{uzytkownik}**")
         st.markdown("---")
         
+        # POPRAWIONA LOGIKA NAWIGACJI (Jedno menu zamiast dwóch)
         if uzytkownik == "Łukasz":
-            st.markdown("GŁÓWNE")
-            menu = st.radio("Menu Główne", ["🏠 Dashboard", "📝 Nowe Zlecenie"], label_visibility="collapsed")
-            st.markdown("OPERACJE")
-            menu2 = st.radio("Menu Operacje", ["⚙️ Zarządzanie Bazą"], label_visibility="collapsed")
-            
-            wybor = menu if menu in ["🏠 Dashboard", "📝 Nowe Zlecenie"] else menu2
+            st.markdown("**MENU**")
+            wybor = st.radio("Nawigacja", [
+                "🏠 Dashboard", 
+                "📝 Nowe Zlecenie", 
+                "⚙️ Zarządzanie Bazą"
+            ], label_visibility="collapsed")
             
         elif uzytkownik == "Dawid":
-            wybor = st.radio("Menu", ["📱 Moje Zlecenia", "🗺️ Mapa (Wkrótce)"])
+            st.markdown("**MENU**")
+            wybor = st.radio("Nawigacja", [
+                "📱 Moje Zlecenia", 
+                "🗺️ Mapa (Wkrótce)"
+            ], label_visibility="collapsed")
         
         st.markdown("---")
         if st.button("🚪 Wyloguj się", use_container_width=True):
