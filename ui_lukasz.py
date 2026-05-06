@@ -60,7 +60,7 @@ def pokaz_dashboard():
         df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
         df_dzis = df_dzis.reset_index(drop=True) # Ważne dla poprawnego zebrowania!
         
-        # Opcjonalne: uatrakcyjnienie danych ikonami, tak jak to pokazałeś
+        # Opcjonalne: uatrakcyjnienie danych ikonami
         status_map = {
             'Nowe': '🔥 Nowe',
             'W drodze': '🚜 W drodze',
@@ -72,7 +72,7 @@ def pokaz_dashboard():
         df_dzis['Kontakt'] = df_dzis['Kontakt'].apply(lambda x: f"📞 {x}" if pd.notnull(x) and x != "" else x)
         df_dzis['Klient'] = df_dzis['Klient'].apply(lambda x: f"🏢 {x}" if pd.notnull(x) and x != "" else x)
 
-        # Funkcja Pandas Styler od Ciebie (Zebrowanie + Custom Nagłówki)
+        # Funkcja Pandas Styler (Zebrowanie + Custom Nagłówki)
         def style_df(styler):
             styler.set_properties(**{'border-radius': '10px'})
             styler.set_table_styles([
@@ -151,6 +151,7 @@ def pokaz_formularz():
             st.success(f"Dodano zadanie! Wykonawca: {wykonawca}")
             st.cache_resource.clear()
 
+
 def pokaz_zarzadzanie():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🛠️</span><span class="dashboard-title">Zarządzanie Bazą</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Tutaj możesz edytować, usuwać i archiwizować wszystkie zadania.</div>', unsafe_allow_html=True)
@@ -209,6 +210,7 @@ def pokaz_zarzadzanie():
     else:
         st.info("Brak zadań w bazie.")
 
+
 def pokaz_archiwum():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📂</span><span class="dashboard-title">Archiwum Zleceń</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Lista wszystkich zarchiwizowanych zadań historycznych.</div>', unsafe_allow_html=True)
@@ -225,7 +227,7 @@ def pokaz_archiwum():
              df_arch['Data_sort'] = pd.to_datetime(df_arch['Data'], format='%Y-%m-%d', errors='coerce')
              df_arch = df_arch.sort_values(by=['Data_sort', 'Godzina'], ascending=[False, False]).drop(columns=['Data_sort'])
         
-        # Ponowne użycie Twojej funkcji stylującej dla Archiwum
+        # Ponowne użycie funkcji stylującej dla Archiwum
         def style_df(styler):
             styler.set_properties(**{'border-radius': '10px'})
             styler.set_table_styles([
@@ -243,3 +245,80 @@ def pokaz_archiwum():
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
     else:
         st.info("Archiwum jest obecnie puste.")
+
+
+def pokaz_magazyn():
+    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🏭</span><span class="dashboard-title">Panel Magazynu</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Lista sprzętu do przygotowania (wydania) i rozładunku (przyjęcia) na wybrany dzień.</div>', unsafe_allow_html=True)
+
+    dane = database.pobierz_wszystkie_dane()
+    if not dane:
+        st.info("Brak zadań w bazie.")
+        return
+
+    df = pd.DataFrame(dane)
+    
+    # Wybór daty - domyślnie dzisiaj, ale magazyn może sprawdzić co jest na jutro!
+    wybrana_data = st.date_input("Wybierz dzień do analizy:", datetime.now().date())
+    df_dzien = df[df['Data'] == wybrana_data.strftime("%Y-%m-%d")]
+
+    if df_dzien.empty:
+        st.success(f"Wolne! Brak zaplanowanych ruchów magazynowych na dzień {wybrana_data}.")
+        return
+
+    # Sortowanie zadań od najwcześniejszych
+    df_dzien['Data_sort'] = pd.to_datetime(df_dzien['Data'], format='%Y-%m-%d', errors='coerce')
+    df_dzien = df_dzien.sort_values(by=['Godzina']).drop(columns=['Data_sort'])
+
+    # Podział logiki na Wydania i Przyjęcia
+    wydania_typy = ["Dowóz do klienta", "Magazyn - Odbiór osobisty przez klienta"]
+    przyjecia_typy = ["Odbiór od klienta", "Magazyn - Zwrot osobisty przez klienta"]
+
+    df_wydania = df_dzien[df_dzien['Typ Akcji'].isin(wydania_typy)]
+    df_przyjecia = df_dzien[df_dzien['Typ Akcji'].isin(przyjecia_typy)]
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown('<div class="table-header" style="color: #e67e22;">📤 WYDANIA (Szykujemy do wyjazdu)</div>', unsafe_allow_html=True)
+        if df_wydania.empty:
+            st.info("Brak wydań tego dnia.")
+        else:
+            for _, row in df_wydania.iterrows():
+                st.markdown(f"""
+                <div class="card-container" style="display:block; padding:15px; border-left: 5px solid #e67e22; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong style="font-size:1.2rem; color:#e67e22;">⏰ {row['Godzina']}</strong>
+                        <span class="card-date-pill" style="background-color:#fffbeb; color:#d97706; font-weight:bold;">
+                            🚚 {row['Wykonawca']} ({row['Auto']})
+                        </span>
+                    </div>
+                    <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Projekt:</strong> {row['Nr Projektu']}</div>
+                    <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Klient:</strong> {row['Klient']}</div>
+                    <div style="font-size:0.85rem; color:#64748b; margin-top:10px; border-top: 1px solid #eee; padding-top: 5px;">
+                        <strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="table-header" style="color: #27ae60;">📥 PRZYJĘCIA (Wraca na magazyn)</div>', unsafe_allow_html=True)
+        if df_przyjecia.empty:
+            st.info("Brak przyjęć tego dnia.")
+        else:
+            for _, row in df_przyjecia.iterrows():
+                st.markdown(f"""
+                <div class="card-container" style="display:block; padding:15px; border-left: 5px solid #27ae60; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong style="font-size:1.2rem; color:#27ae60;">⏰ {row['Godzina']}</strong>
+                        <span class="card-date-pill" style="background-color:#f0fdf4; color:#16a34a; font-weight:bold;">
+                            🚚 {row['Wykonawca']} ({row['Auto']})
+                        </span>
+                    </div>
+                    <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Projekt:</strong> {row['Nr Projektu']}</div>
+                    <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Klient:</strong> {row['Klient']}</div>
+                    <div style="font-size:0.85rem; color:#64748b; margin-top:10px; border-top: 1px solid #eee; padding-top: 5px;">
+                         <strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
