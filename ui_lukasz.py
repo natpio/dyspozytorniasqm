@@ -24,7 +24,6 @@ def pokaz_dashboard():
     zakonczone = len(df_dzis[df_dzis['Status'] == 'Zakończone'])
     
     c1, c2, c3, c4 = st.columns(4)
-    # Wstrzykujemy kod HTML z naszymi klasami CSS zdefiniowanymi w app.py
     c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Wszystkie zlecenia</div><div class="kpi-value" style="color: #58a6ff;">{wszystkie}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
     c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Nowe</div><div class="kpi-value" style="color: #ff7b72;">{nowe}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
     c3.markdown(f'<div class="kpi-card"><div class="kpi-title">W trakcie</div><div class="kpi-value" style="color: #d2a8ff;">{w_trakcie}</div><div class="kpi-title" style="margin-bottom:0; margin-top:10px;">Dzisiaj</div></div>', unsafe_allow_html=True)
@@ -36,7 +35,6 @@ def pokaz_dashboard():
     st.subheader(f"Zlecenia na dziś ({dzis})")
     
     def koloruj_statusy(val):
-        # Nowe kolory dopasowane do Dark UI (półprzezroczyste tła)
         if val == 'Zakończone': return 'background-color: rgba(63, 185, 80, 0.15); color: #3fb950; font-weight: bold;'
         elif val == 'W drodze': return 'background-color: rgba(210, 168, 255, 0.15); color: #d2a8ff; font-weight: bold;'
         elif val == 'Nowe': return 'background-color: rgba(255, 123, 114, 0.15); color: #ff7b72; font-weight: bold;'
@@ -46,7 +44,14 @@ def pokaz_dashboard():
     if not df_dzis.empty:
         df_dzis['Data_sort'] = pd.to_datetime(df_dzis['Data'], format='%Y-%m-%d', errors='coerce')
         df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
-        st.dataframe(df_dzis.style.applymap(koloruj_statusy, subset=['Status']), use_container_width=True, hide_index=True)
+        
+        # KULOODPORNE KOLOROWANIE (niezależne od wersji Pandas na serwerze)
+        try:
+            tabela_style = df_dzis.style.map(koloruj_statusy, subset=['Status'])
+        except AttributeError:
+            tabela_style = df_dzis.style.applymap(koloruj_statusy, subset=['Status'])
+            
+        st.dataframe(tabela_style, use_container_width=True, hide_index=True)
     else:
         st.info("Odpoczywamy! Brak zleceń na dzisiaj.")
         
@@ -72,7 +77,6 @@ def pokaz_dashboard():
 def pokaz_formularz():
     st.header("📝 Dodaj nowe zlecenie")
     st.write("Wypełnij formularz, aby dodać zadanie do bazy.")
-    # (Tutaj wrzucamy ten sam formularz co wcześniej)
     with st.form("nowe_zadanie_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -114,7 +118,6 @@ def pokaz_zarzadzanie():
             wybrane_id = wybor.split(" | ")[0]
             wiersz = df[df['ID'].astype(str) == wybrane_id].iloc[0]
             
-            # Formularz edycji
             with st.form("formularz_edycji"):
                 e_k1, e_k2 = st.columns(2)
                 with e_k1:
