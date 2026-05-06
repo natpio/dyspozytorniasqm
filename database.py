@@ -18,6 +18,11 @@ def get_worksheet(nazwa_arkusza="Arkusz1"):
 def pobierz_wszystkie_dane():
     return get_worksheet("Arkusz1").get_all_records()
 
+# --- NOWA FUNKCJA DO ARCHIWUM ---
+def pobierz_archiwum():
+    return get_worksheet("Archiwum").get_all_records()
+# --------------------------------
+
 def dodaj_zadanie(wiersz):
     get_worksheet("Arkusz1").append_row(wiersz)
 
@@ -25,7 +30,7 @@ def aktualizuj_status(id_zadania, nowy_status):
     arkusz = get_worksheet("Arkusz1")
     komorka = arkusz.find(str(id_zadania))
     if komorka:
-        arkusz.update_cell(komorka.row, 11, nowy_status) # 11 to kolumna 'Status'
+        arkusz.update_cell(komorka.row, 11, nowy_status)
 
 def usun_zadanie(id_zadania):
     arkusz = get_worksheet("Arkusz1")
@@ -46,7 +51,6 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
     arkusz = get_worksheet("Arkusz1")
     komorka = arkusz.find(str(id_zadania))
     if komorka:
-        # Zapisujemy komórkę po komórce dla bezpieczeństwa typu danych
         lista_komorek = arkusz.range(f"A{komorka.row}:L{komorka.row}")
         for i, wartosc in enumerate(nowy_wiersz):
             lista_komorek[i].value = str(wartosc)
