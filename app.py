@@ -12,22 +12,40 @@ if "zalogowany" not in st.session_state:
 
 # --- CSS Z ANIMOWANYM TŁEM I NOWOCZESNYM UI ---
 local_css_string = """
-/* Animacja dla tła */
+/* --- 1. UKRYWANIE ELEMENTÓW STREAMLITA (ZNAKI WODNE) --- */
+[data-testid="stHeader"] {
+    display: none !important;
+}
+footer {
+    display: none !important;
+}
+#MainMenu {
+    visibility: hidden !important;
+}
+.stDeployButton {
+    display: none !important;
+}
+
+/* --- 2. ANIMACJA DLA TŁA --- */
 @keyframes gradientBG {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
-/* Globalne tło głównego panelu - Animowany Pływający Gradient */
+/* Wymuszenie tła na głównym kontenerze aplikacji (.stApp) */
+.stApp {
+    background: linear-gradient(-45deg, #f0f4f8, #e6eef7, #dce6f5, #f4f7f9) !important;
+    background-size: 400% 400% !important;
+    animation: gradientBG 15s ease infinite !important;
+}
+
+/* Globalny kolor tekstu */
 .main {
-    background: linear-gradient(-45deg, #f4f7f9, #e6eef7, #dce6f5, #f0f4f8);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
     color: #333333;
 }
 
-/* Stylizacja paska bocznego (Sidebar) - głęboki granat */
+/* --- 3. STYLIZACJA PASKA BOCZNEGO (Sidebar) --- */
 section[data-testid="stSidebar"] {
     background-color: #1a2233 !important;
     color: #ffffff !important;
@@ -81,7 +99,7 @@ div[role="radiogroup"] > label p {
 .dashboard-title { font-size: 1.8rem; font-weight: bold; color: #333; }
 .dashboard-subheader { font-size: 0.9rem; color: #6c757d; margin-bottom: 2rem; }
 
-.card-container { background: linear-gradient(145deg, #ffffff, #e6e6e6); border-radius: 15px; box-shadow: 20px 20px 60px #d9d9d9, -20px -20px 60px #ffffff; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; }
+.card-container { background: linear-gradient(145deg, #ffffff, #e6e6e6); border-radius: 15px; box-shadow: 10px 10px 30px #e6e6e6, -10px -10px 30px #ffffff; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #f1f5f9; }
 .card-container:hover { transform: translateY(-3px); }
 .card-info { display: flex; flex-direction: column; }
 .card-title { font-size: 0.85rem; color: #6c757d; margin-bottom: 10px; }
