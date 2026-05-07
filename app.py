@@ -36,7 +36,7 @@ footer { display: none !important; }
 #MainMenu { visibility: hidden !important; }
 .stDeployButton { display: none !important; }
 
-/* --- 2. NOWE TŁO Z PLIKU (Z EFEKTEM GĘSTEGO MROŻONEGO SZKŁA) --- */
+/* --- 2. NOWE TŁO Z PLIKU (ZŁOTY ŚRODEK - LEKKIE MROŻONE SZKŁO) --- */
 .stApp {
     background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
     background-size: cover !important;
@@ -45,19 +45,19 @@ footer { display: none !important; }
     background-color: #f7f9fc !important; 
 }
 
-/* Nakładka "mrożonego szkła" - TERAZ ZNACZNIE BARDZIEJ ZAMGLONA */
+/* Nakładka "mrożonego szkła" - IDEALNY BALANS */
 .stApp::before {
     content: "";
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(247, 249, 252, 0.92); /* Mocne krycie (92%) */
-    backdrop-filter: blur(12px); /* Bardzo mocne rozmycie */
-    -webkit-backdrop-filter: blur(12px); /* Dla Safari/iOS */
+    background-color: rgba(247, 249, 252, 0.75); /* Lżejsze krycie (75%) */
+    backdrop-filter: blur(4px); /* Delikatne rozmycie (4px zamiast 12px) */
+    -webkit-backdrop-filter: blur(4px); /* Dla Safari/iOS */
     z-index: 0;
-    pointer-events: none; /* Ważne: żeby warstwa nie blokowała klikania w formularze */
+    pointer-events: none; /* Ważne: żeby warstwa nie blokowała klikania */
 }
 
-/* Gwarancja, że zawartość leży nad mgłą */
+/* Gwarancja, że zawartość leży nad tłem */
 .appview-container, .main {
     position: relative;
     z-index: 1;
@@ -115,11 +115,12 @@ div[role="radiogroup"] > label p {
 .dashboard-title { font-size: 1.8rem; font-weight: bold; color: #333; }
 .dashboard-subheader { font-size: 0.9rem; color: #6c757d; margin-bottom: 2rem; }
 
-.card-container { background: linear-gradient(145deg, #ffffff, #e6e6e6); border-radius: 15px; box-shadow: 10px 10px 30px #e6e6e6, -10px -10px 30px #ffffff; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #f1f5f9; }
+/* Upewniamy się, że karty są w 100% nieprzezroczyste, by tekst na nich był idealnie czytelny */
+.card-container { background: linear-gradient(145deg, #ffffff, #f8fafc); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #e2e8f0; }
 .card-container:hover { transform: translateY(-3px); }
 .card-info { display: flex; flex-direction: column; }
-.card-title { font-size: 0.85rem; color: #6c757d; margin-bottom: 10px; }
-.card-value { font-size: 2.2rem; font-weight: bold; color: #333; margin-bottom: 15px; }
+.card-title { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
+.card-value { font-size: 2.2rem; font-weight: bold; color: #0f172a; margin-bottom: 15px; }
 .card-date-pill { display: flex; align-items: center; border-radius: 15px; padding: 4px 10px; font-size: 0.75rem; }
 .card-date-icon { margin-right: 5px; font-size: 0.8rem; }
 .card-icon { font-size: 2.5rem; }
@@ -129,7 +130,7 @@ div[role="radiogroup"] > label p {
 .zakonczone .card-date-pill { background-color: rgba(39, 174, 96, 0.1); color: #27ae60; }
 .wszystkie-zlecenia .card-date-pill { background-color: rgba(93, 156, 236, 0.1); color: #5d9cec; }
 
-.table-header { font-size: 1.1rem; font-weight: bold; color: #333; margin-top: 2rem; margin-bottom: 1rem; }
+.table-header { font-size: 1.1rem; font-weight: bold; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem; }
 .dataframe { border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; background-color: white !important; }
 
 .sidebar-footer-login { position: fixed; bottom: 80px; left: 20px; color: #8da1b3 !important; font-size: 0.75rem; }
