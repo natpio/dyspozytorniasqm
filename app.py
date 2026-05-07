@@ -5,10 +5,10 @@ import ui_dawid
 import database
 import base64
 
-# 1. KONFIGURACJA STRONY (Musi być na samym początku)
+# --- 1. KONFIGURACJA STRONY (Musi być na samej górze) ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
-# 2. INICJALIZACJA ZMIENNYCH SESYJNYCH
+# --- 2. INICJALIZACJA ZMIENNYCH SESYJNYCH ---
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
@@ -18,7 +18,7 @@ if "bg_opacity" not in st.session_state:
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# 3. FUNKCJA POMOCNICZA: ZAPIS USTAWIEŃ DO BAZY
+# --- 3. FUNKCJA POMOCNICZA: ZAPIS USTAWIEŃ DO BAZY ---
 def zapisz_zmiany_ui():
     """Wysyła aktualne wartości suwaków bezpośrednio do Google Sheets"""
     if st.session_state["zalogowany"]:
@@ -28,7 +28,7 @@ def zapisz_zmiany_ui():
             st.session_state.bg_blur
         )
 
-# 4. FUNKCJA DO ŁADOWANIA OBRAZU TŁA
+# --- 4. FUNKCJA DO ŁADOWANIA OBRAZU TŁA ---
 def get_base64_of_bin_file(bin_file):
     """Konwertuje obraz na format tekstowy dla CSS"""
     try:
@@ -42,7 +42,7 @@ def get_base64_of_bin_file(bin_file):
 bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
 bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
-# 5. PEŁNY KOD CSS (White Label + Dynamiczne Tło + Menu)
+# --- 5. PEŁNY KOD CSS (White Label + Dynamiczne Tło + Menu) ---
 local_css_string = """
 /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
 [data-testid="stHeader"] { display: none !important; }
@@ -85,9 +85,26 @@ section[data-testid="stSidebar"] {
     z-index: 100;
 }
 
-.sidebar-header { font-size: 1.2rem; font-weight: bold; padding: 0 1rem 1rem 1rem; border-bottom: 1px solid #3d495f; margin-bottom: 1rem; color: white; }
-.sidebar-subheader { font-size: 0.8rem; color: #8da1b3 !important; padding: 0 1rem 1.5rem 1rem; }
-.sidebar-menu-header { font-size: 0.75rem; color: #8da1b3 !important; padding: 0 1rem; margin-top: 1rem; text-transform: uppercase; }
+.sidebar-header { 
+    font-size: 1.3rem; 
+    font-weight: bold; 
+    color: white; 
+    padding: 0 1rem;
+}
+.sidebar-subheader { 
+    font-size: 0.8rem; 
+    color: #8da1b3 !important; 
+    padding: 0.2rem 1rem 1rem 1rem; 
+    border-bottom: 1px solid #3d495f; 
+    margin-bottom: 1rem; 
+}
+.sidebar-menu-header { 
+    font-size: 0.75rem; 
+    color: #8da1b3 !important; 
+    padding: 0 1rem; 
+    margin-top: 1rem; 
+    text-transform: uppercase; 
+}
 
 /* PRZYCISKI MENU (RADIO) */
 div[role="radiogroup"] > label {
@@ -104,28 +121,33 @@ div[role="radiogroup"] > label:hover { background-color: #2b3a53; }
 div[role="radiogroup"] > label[data-checked="true"] { background-color: #2b3a53; }
 div[role="radiogroup"] > label[data-checked="true"] p { color: #5d9cec !important; font-weight: bold !important; }
 div[role="radiogroup"] > label span[data-baseweb="radio"] div:first-child { display: none !important; }
+div[role="radiogroup"] > label p { font-size: 0.95rem; margin-left: 10px; }
 
-/* STOPKA PASKA BOCZNEGO */
-.sidebar-footer-text { 
-    color: #8da1b3 !important; 
-    font-size: 0.75rem; 
-    border-top: 1px solid #3d495f; 
-    padding-top: 15px; 
-    margin-bottom: 5px; 
+/* PRZYCISK WYLOGOWANIA W PASKU BOCZNYM */
+div[data-testid="stSidebar"] .stButton > button {
+    background-color: #8e44ad !important;
+    color: white !important;
+    border-radius: 12px !important;
+    border: none !important;
+    font-weight: bold !important;
+    transition: background-color 0.2s;
+}
+div[data-testid="stSidebar"] .stButton > button:hover {
+    background-color: #732d91 !important;
 }
 """
 
-# Podmiana dynamicznych wartości w CSS
+# Podmiana dynamicznych parametrów CSS (tło, krycie, blur)
 local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
 local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(st.session_state.bg_opacity))
 local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(st.session_state.bg_blur))
 
 st.markdown(f'<style>{local_css_string}</style>', unsafe_allow_html=True)
 
-# 6. EKRAN LOGOWANIA
+# --- 6. EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
-    st.markdown('<h2 style="color: #1a2233;">🔐 SQM DISPATCH - Logowanie</h2>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #64748b;">Podaj swój kod PIN, aby uzyskać dostęp.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🔐</span><span class="dashboard-title">SQM DISPATCH</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader" style="color: #64748b; margin-bottom: 2rem;">Zaloguj się podając PIN.</div>', unsafe_allow_html=True)
     
     col1, _ = st.columns([1, 3])
     with col1:
@@ -145,11 +167,12 @@ if st.session_state["zalogowany"] is None:
             else:
                 st.error("Błędny PIN!")
 
-# 7. INTERFEJS PO ZALOGOWANIU
+# --- 7. INTERFEJS PO ZALOGOWANIU ---
 else:
     uzytkownik = st.session_state["zalogowany"]
     
     with st.sidebar:
+        # Nagłówek i (tylko raz!) informacja o zalogowanym użytkowniku
         st.markdown(f'<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sidebar-subheader">Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
         
@@ -167,25 +190,22 @@ else:
         else:
             wybor = st.radio("Nawigacja", ["📱 Moje Zlecenia"], label_visibility="collapsed")
 
-        # Pchnięcie stopki na dół
-        st.markdown("<div style='min-height: 25vh;'></div>", unsafe_allow_html=True)
+        # Rozpychacz (wypycha resztę elementów na sam dół paska bocznego)
+        st.markdown("<div style='min-height: 35vh;'></div>", unsafe_allow_html=True)
         
-        # STOPKA PASKA BOCZNEGO
-        st.markdown(f'<div class="sidebar-footer-text">SQM DISPATCH<br>Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
-        
-        # UKRYTE USTAWIENIA UI (Tylko dla Łukasza)
+        # UKRYTE USTAWIENIA UI (Tylko dla Łukasza) na samym dole przed wylogowaniem
         if uzytkownik == "Łukasz":
-            with st.expander("🛠️ Ukryte Ustawienia UI"):
-                st.markdown("<small>Dostosuj widoczność i rozmycie tła.</small>", unsafe_allow_html=True)
+            with st.expander("🛠️ Ustawienia UI"):
+                st.markdown("<small style='color: #8da1b3;'>Dostosuj widoczność tła.</small>", unsafe_allow_html=True)
                 st.slider("Gęstość mgły", 0.0, 1.0, step=0.05, key="bg_opacity", on_change=zapisz_zmiany_ui)
                 st.slider("Siła rozmycia", 0, 20, step=1, key="bg_blur", on_change=zapisz_zmiany_ui)
 
         # PRZYCISK WYLOGOWANIA
-        if st.button("Wyloguj się", use_container_width=True, type="secondary"):
+        if st.button("Wyloguj się", use_container_width=True):
             st.session_state["zalogowany"] = None
             st.rerun()
 
-    # 8. ROUTING - WYWOŁYWANIE MODUŁÓW
+    # --- 8. ROUTING - WYWOŁYWANIE MODUŁÓW Z INNYCH PLIKÓW ---
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=30000, limit=None, key="odswiezanie_lukasz")
         
