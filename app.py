@@ -42,7 +42,7 @@ def get_base64_of_bin_file(bin_file):
 bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
 bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
-# --- 5. PEŁNY KOD CSS (White Label + Dynamiczne Tło + Menu) ---
+# --- 5. PEŁNY KOD CSS (White Label + Dynamiczne Tło + Menu + Karty) ---
 local_css_string = """
 /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
 [data-testid="stHeader"] { display: none !important; }
@@ -85,26 +85,9 @@ section[data-testid="stSidebar"] {
     z-index: 100;
 }
 
-.sidebar-header { 
-    font-size: 1.3rem; 
-    font-weight: bold; 
-    color: white; 
-    padding: 0 1rem;
-}
-.sidebar-subheader { 
-    font-size: 0.8rem; 
-    color: #8da1b3 !important; 
-    padding: 0.2rem 1rem 1rem 1rem; 
-    border-bottom: 1px solid #3d495f; 
-    margin-bottom: 1rem; 
-}
-.sidebar-menu-header { 
-    font-size: 0.75rem; 
-    color: #8da1b3 !important; 
-    padding: 0 1rem; 
-    margin-top: 1rem; 
-    text-transform: uppercase; 
-}
+.sidebar-header { font-size: 1.3rem; font-weight: bold; color: white; padding: 0 1rem; }
+.sidebar-subheader { font-size: 0.8rem; color: #8da1b3 !important; padding: 0.2rem 1rem 1rem 1rem; border-bottom: 1px solid #3d495f; margin-bottom: 1rem; }
+.sidebar-menu-header { font-size: 0.75rem; color: #8da1b3 !important; padding: 0 1rem; margin-top: 1rem; text-transform: uppercase; }
 
 /* PRZYCISKI MENU (RADIO) */
 div[role="radiogroup"] > label {
@@ -121,7 +104,11 @@ div[role="radiogroup"] > label:hover { background-color: #2b3a53; }
 div[role="radiogroup"] > label[data-checked="true"] { background-color: #2b3a53; }
 div[role="radiogroup"] > label[data-checked="true"] p { color: #5d9cec !important; font-weight: bold !important; }
 div[role="radiogroup"] > label span[data-baseweb="radio"] div:first-child { display: none !important; }
-div[role="radiogroup"] > label p { font-size: 0.95rem; margin-left: 10px; }
+/* Naprawa koloru tekstu w menu bocznym */
+div[role="radiogroup"] > label p { font-size: 0.95rem; margin-left: 10px; color: #ffffff !important; }
+
+/* STOPKA PASKA BOCZNEGO */
+.sidebar-footer-text { color: #8da1b3 !important; font-size: 0.75rem; border-top: 1px solid #3d495f; padding-top: 15px; margin-bottom: 5px; }
 
 /* PRZYCISK WYLOGOWANIA W PASKU BOCZNYM */
 div[data-testid="stSidebar"] .stButton > button {
@@ -132,9 +119,33 @@ div[data-testid="stSidebar"] .stButton > button {
     font-weight: bold !important;
     transition: background-color 0.2s;
 }
-div[data-testid="stSidebar"] .stButton > button:hover {
-    background-color: #732d91 !important;
-}
+div[data-testid="stSidebar"] .stButton > button:hover { background-color: #732d91 !important; }
+
+/* ========================================= */
+/* PRZYWRÓCONE STYLANIE KART NA DASHBOARDZIE */
+/* ========================================= */
+
+.dashboard-header { display: flex; align-items: center; margin-bottom: 0.5rem; }
+.dashboard-title-icon { font-size: 1.8rem; margin-right: 10px; color: #8da1b3; }
+.dashboard-title { font-size: 1.8rem; font-weight: bold; color: #0f172a; }
+.dashboard-subheader { font-size: 0.9rem; color: #64748b; margin-bottom: 2rem; }
+
+.card-container { background: linear-gradient(145deg, #ffffff, #f8fafc); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #e2e8f0; }
+.card-container:hover { transform: translateY(-3px); }
+.card-info { display: flex; flex-direction: column; }
+.card-title { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
+.card-value { font-size: 2.2rem; font-weight: bold; color: #0f172a; margin-bottom: 15px; }
+.card-date-pill { display: flex; align-items: center; border-radius: 15px; padding: 4px 10px; font-size: 0.75rem; }
+.card-date-icon { margin-right: 5px; font-size: 0.8rem; }
+.card-icon { font-size: 2.5rem; }
+
+.nowe .card-date-pill { background-color: rgba(230, 126, 34, 0.1); color: #e67e22; }
+.w-trakcie .card-date-pill { background-color: rgba(241, 196, 15, 0.1); color: #f1c40f; }
+.zakonczone .card-date-pill { background-color: rgba(39, 174, 96, 0.1); color: #27ae60; }
+.wszystkie-zlecenia .card-date-pill { background-color: rgba(93, 156, 236, 0.1); color: #5d9cec; }
+
+.table-header { font-size: 1.1rem; font-weight: bold; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem; }
+.dataframe { border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; background-color: white !important; }
 """
 
 # Podmiana dynamicznych parametrów CSS (tło, krycie, blur)
