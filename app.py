@@ -12,18 +12,30 @@ import base64
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-# Unikalny klucz dla CookieManagera zapobiega konfliktom
-cookie_manager = stx.CookieManager(key="sqm_cookie_manager_v6")
+cookie_manager = stx.CookieManager(key="sqm_cookie_manager_v7")
 
-# --- 3. INICJALIZACJA SESJI ---
+# --- 3. INICJALIZACJA SESJI I ZAPOBIEGANIE PĘTLI WYLOGOWANIA ---
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
 if "wybrane_konto" not in st.session_state:
     st.session_state["wybrane_konto"] = None
 
-# Automatyczne logowanie z ciasteczka (tylko gdy nie jesteśmy zalogowani)
+# Flaga zapobiegająca odczytaniu starego ciastka tuż po wylogowaniu
+if "wyloguj_mnie" not in st.session_state:
+    st.session_state["wyloguj_mnie"] = False
+
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
+
+# Wykonanie procedury wylogowania z pominięciem st.rerun() w złym momencie
+if st.session_state["wyloguj_mnie"]:
+    cookie_manager.delete("zalogowany")
+    st.session_state["zalogowany"] = None
+    st.session_state["wybrane_konto"] = None
+    st.session_state["wyloguj_mnie"] = False
+    zalogowany_cookie = None  # Wymuszamy zignorowanie starego ciastka z przeglądarki
+
+# Automatyczne logowanie z ciasteczka (tylko gdy nie jesteśmy zalogowani)
 if zalogowany_cookie and st.session_state["zalogowany"] is None:
     st.session_state["zalogowany"] = zalogowany_cookie
     # Wczytywanie osobistych ustawień UI z bazy
@@ -190,7 +202,6 @@ if st.session_state["zalogowany"] is None:
         with col_pin:
             pin = st.text_input("Podaj kod PIN", type="password")
             if st.button("Zaloguj", type="primary", use_container_width=True):
-                # Mapowanie wybranego konta na klucz w secrets.toml
                 key = st.session_state["wybrane_konto"].lower().replace("ł", "l")
                 
                 try:
@@ -204,7 +215,7 @@ if st.session_state["zalogowany"] is None:
                     # Ustawienie ciasteczka na 30 dni
                     waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=waznosc)
-                    # Wczytanie ustawień UI
+                    
                     op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
                     st.session_state.bg_opacity = op
                     st.session_state.bg_blur = bl
@@ -229,7 +240,7 @@ else:
         else:
             wybor = st.radio("Nav", ["🏭 Tablica Magazynowa"], label_visibility="collapsed")
 
-        st.markdown("<br><br>", unsafe_allow_html=True) # Zastąpiło stary "rozpychacz"
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
         # Ustawienia UI tylko dla Łukasza
         if uzytkownik == "Łukasz":
@@ -240,14 +251,13 @@ else:
 
         # Wylogowanie
         if st.button("Wyloguj się", use_container_width=True):
-            cookie_manager.delete("zalogowany")
-            st.session_state["zalogowany"] = None
-            st.session_state["wybrane_konto"] = None
+            # Ustawiamy flagę i wymuszamy restart BEZ przedwczesnego resetowania stanu
+            st.session_state["wyloguj_mnie"] = True
             st.rerun()
 
     # --- 8. ROUTING ---
     if uzytkownik == "Łukasz":
-        st_autorefresh(interval=30000, key="refresh_lukasz")
+        st_autorefresh(interval=30000, limit=None, key="odswiezanie_lukasz")
         if wybor == "⚙️ Dashboard": ui_lukasz.pokaz_dashboard()
         elif wybor == "➕ Nowy Wpis": ui_lukasz.pokaz_formularz()
         elif wybor == "🏭 Logistyka Magazynowa": ui_lukasz.pokaz_magazyn()
@@ -258,5 +268,5 @@ else:
         ui_dawid.pokaz_panel()
         
     elif uzytkownik == "Magazyn":
-        st_autorefresh(interval=30000, key="refresh_magazyn")
+        st_autorefresh(interval=30000, limit=None, key="odswiezanie_magazyn")
         ui_magazyn.pokaz_tablice()
