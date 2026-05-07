@@ -81,6 +81,25 @@ section[data-testid="stSidebar"] * {
     color: #ffffff !important;
 }
 
+/* Magia CSS dla paska bocznego - usunięcie sztywnego pozycjonowania na rzecz naturalnego układu */
+.sidebar-footer-text { 
+    color: #8da1b3 !important; 
+    font-size: 0.75rem; 
+    border-top: 1px solid #3d495f; 
+    padding-top: 15px; 
+    margin-bottom: 5px; 
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    background-color: #8e44ad !important;
+    color: white !important;
+    border-radius: 12px !important;
+    border: none;
+    font-size: 0.9rem;
+    padding: 10px;
+    margin-top: 10px;
+}
+
 /* --- MAGIA CSS: Przerabiamy standardowe st.radio na Twoje przyciski --- */
 div[role="radiogroup"] > label {
     display: flex;
@@ -138,8 +157,6 @@ div[role="radiogroup"] > label p {
 
 .table-header { font-size: 1.1rem; font-weight: bold; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem; }
 .dataframe { border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; background-color: white !important; }
-
-.sidebar-footer-login { position: fixed; bottom: 80px; left: 20px; color: #8da1b3 !important; font-size: 0.75rem; }
 """
 
 # Dynamiczna podmiana wartości z pamięci sesji
@@ -178,6 +195,7 @@ else:
         
         st.markdown('<div class="sidebar-menu-header">MENU</div>', unsafe_allow_html=True)
         
+        # Wybór zakładki
         if uzytkownik == "Łukasz":
             wybor = st.radio("Nawigacja", [
                 "⚙️ Dashboard", 
@@ -186,43 +204,27 @@ else:
                 "🛠️ Konsola Administracyjna", 
                 "📂 Archiwum Cyfrowe"
             ], label_visibility="collapsed")
-            
-            # --- UKRYTE MENU DEWELOPERSKIE (Tylko dla Łukasza) ---
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            with st.expander("🛠️ Ukryte Ustawienia UI"):
-                st.markdown("<small>Dostosuj przezroczystość i rozmycie tła na żywo.</small>", unsafe_allow_html=True)
-                # Streamlit sam odświeży apkę i zapisze wartość, gdy podamy parametr "key"
-                st.slider("Gęstość mgły (Krycie)", 0.0, 1.0, step=0.05, key="bg_opacity")
-                st.slider("Siła rozmycia (Blur)", 0, 20, step=1, key="bg_blur")
-
         elif uzytkownik == "Dawid":
             wybor = st.radio("Nawigacja", [
                 "📱 Moje Zlecenia"
             ], label_visibility="collapsed")
 
-        # Dolny przycisk wylogowania
-        st.markdown(f'<div class="sidebar-footer-login">SQM DISPATCH<br>Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
+        # Przestrzeń wypełniająca (optyczne zepchnięcie elementów na sam dół)
+        st.markdown("<div style='min-height: 25vh;'></div>", unsafe_allow_html=True)
         
-        st.markdown(
-            """
-            <style>
-            .stButton>button[key="logout_sidebar"] {
-                position: fixed;
-                bottom: 20px;
-                left: 20px;
-                width: calc(100% - 40px);
-                max-width: 250px;
-                background-color: #8e44ad !important;
-                color: white !important;
-                border-radius: 12px !important;
-                border: none;
-                font-size: 0.9rem;
-                padding: 10px;
-            }
-            </style>
-            """, unsafe_allow_html=True
-        )
-        if st.button("Wyloguj się", key="logout_sidebar"):
+        # --- STOPKA PASKA BOCZNEGO ---
+        # 1. Informacja kto jest zalogowany
+        st.markdown(f'<div class="sidebar-footer-text">SQM DISPATCH<br>Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
+        
+        # 2. Ukryte menu ustawień (wyłącznie dla Łukasza)
+        if uzytkownik == "Łukasz":
+            with st.expander("🛠️ Ukryte Ustawienia UI"):
+                st.markdown("<small>Dostosuj widoczność i rozmycie tła.</small>", unsafe_allow_html=True)
+                st.slider("Gęstość mgły (Krycie)", 0.0, 1.0, step=0.05, key="bg_opacity")
+                st.slider("Siła rozmycia (Blur)", 0, 20, step=1, key="bg_blur")
+
+        # 3. Przycisk wylogowania zajmujący całą dostępną szerokość 
+        if st.button("Wyloguj się", use_container_width=True):
             st.session_state["zalogowany"] = None
             st.rerun()
 
