@@ -7,9 +7,15 @@ import base64
 # Konfiguracja strony musi być na samej górze
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
-# Inicjalizacja sesji logowania
+# --- INICJALIZACJA ZMIENNYCH SESYJNYCH ---
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
+
+# Zmienne dla naszego ukrytego panelu UI (domyślne ustawienia "złotego środka")
+if "bg_opacity" not in st.session_state:
+    st.session_state.bg_opacity = 0.75
+if "bg_blur" not in st.session_state:
+    st.session_state.bg_blur = 4
 
 # --- FUNKCJA DO ŁADOWANIA OBRAZU TŁA ---
 def get_base64_of_bin_file(bin_file):
@@ -28,7 +34,7 @@ if bg_img_base64:
 else:
     bg_img_url = "" 
 
-# --- CSS Z AKTUALIZACJĄ TŁA ---
+# --- CSS Z DYNAMICZNYMI PARAMETRAMI ---
 local_css_string = """
 /* --- 1. UKRYWANIE ELEMENTÓW STREAMLITA (ZNAKI WODNE) --- */
 [data-testid="stHeader"] { display: none !important; }
@@ -36,7 +42,7 @@ footer { display: none !important; }
 #MainMenu { visibility: hidden !important; }
 .stDeployButton { display: none !important; }
 
-/* --- 2. NOWE TŁO Z PLIKU (ZŁOTY ŚRODEK - LEKKIE MROŻONE SZKŁO) --- */
+/* --- 2. NOWE TŁO Z PLIKU --- */
 .stApp {
     background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
     background-size: cover !important;
@@ -45,16 +51,16 @@ footer { display: none !important; }
     background-color: #f7f9fc !important; 
 }
 
-/* Nakładka "mrożonego szkła" - IDEALNY BALANS */
+/* Nakładka "mrożonego szkła" - STEROWANA SUWAKAMI */
 .stApp::before {
     content: "";
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(247, 249, 252, 0.75); /* Lżejsze krycie (75%) */
-    backdrop-filter: blur(4px); /* Delikatne rozmycie (4px zamiast 12px) */
-    -webkit-backdrop-filter: blur(4px); /* Dla Safari/iOS */
+    background-color: rgba(247, 249, 252, OPACITY_PLACEHOLDER); 
+    backdrop-filter: blur(BLUR_PLACEHOLDERpx); 
+    -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx); 
     z-index: 0;
-    pointer-events: none; /* Ważne: żeby warstwa nie blokowała klikania */
+    pointer-events: none; 
 }
 
 /* Gwarancja, że zawartość leży nad tłem */
@@ -115,7 +121,7 @@ div[role="radiogroup"] > label p {
 .dashboard-title { font-size: 1.8rem; font-weight: bold; color: #333; }
 .dashboard-subheader { font-size: 0.9rem; color: #6c757d; margin-bottom: 2rem; }
 
-/* Upewniamy się, że karty są w 100% nieprzezroczyste, by tekst na nich był idealnie czytelny */
+/* Karty i Tabele */
 .card-container { background: linear-gradient(145deg, #ffffff, #f8fafc); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #e2e8f0; }
 .card-container:hover { transform: translateY(-3px); }
 .card-info { display: flex; flex-direction: column; }
@@ -136,8 +142,10 @@ div[role="radiogroup"] > label p {
 .sidebar-footer-login { position: fixed; bottom: 80px; left: 20px; color: #8da1b3 !important; font-size: 0.75rem; }
 """
 
-# Bezpieczna podmiana tekstu
+# Dynamiczna podmiana wartości z pamięci sesji
 local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
+local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(st.session_state.bg_opacity))
+local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(st.session_state.bg_blur))
 
 st.markdown(f'<style>{local_css_string}</style>', unsafe_allow_html=True)
 
@@ -170,7 +178,6 @@ else:
         
         st.markdown('<div class="sidebar-menu-header">MENU</div>', unsafe_allow_html=True)
         
-        # Nawigacja Pythonowa z ukrytymi radio buttonami przez CSS
         if uzytkownik == "Łukasz":
             wybor = st.radio("Nawigacja", [
                 "⚙️ Dashboard", 
@@ -179,6 +186,15 @@ else:
                 "🛠️ Konsola Administracyjna", 
                 "📂 Archiwum Cyfrowe"
             ], label_visibility="collapsed")
+            
+            # --- UKRYTE MENU DEWELOPERSKIE (Tylko dla Łukasza) ---
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            with st.expander("🛠️ Ukryte Ustawienia UI"):
+                st.markdown("<small>Dostosuj przezroczystość i rozmycie tła na żywo.</small>", unsafe_allow_html=True)
+                # Streamlit sam odświeży apkę i zapisze wartość, gdy podamy parametr "key"
+                st.slider("Gęstość mgły (Krycie)", 0.0, 1.0, step=0.05, key="bg_opacity")
+                st.slider("Siła rozmycia (Blur)", 0, 20, step=1, key="bg_blur")
+
         elif uzytkownik == "Dawid":
             wybor = st.radio("Nawigacja", [
                 "📱 Moje Zlecenia"
@@ -187,7 +203,6 @@ else:
         # Dolny przycisk wylogowania
         st.markdown(f'<div class="sidebar-footer-login">SQM DISPATCH<br>Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
         
-        # Stylizacja samego przycisku Wyloguj
         st.markdown(
             """
             <style>
