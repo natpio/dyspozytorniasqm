@@ -12,7 +12,7 @@ import base64
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_pro_v15")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_pro_v16")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -31,8 +31,9 @@ zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
     op, bl = database.pobierz_ustawienia_uzytkownika(zalogowany_cookie)
-    st.session_state.bg_opacity = op
-    st.session_state.bg_blur = bl
+    # BEZPIECZNIKI: Zabezpieczamy wartości przed błędem StreamlitValueAboveMaxError
+    st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
+    st.session_state.bg_blur = max(0, min(20, int(bl)))
 
 # Domyślne wartości UI
 if "bg_opacity" not in st.session_state:
@@ -116,7 +117,6 @@ section[data-testid="stSidebar"] * { color: #f8fafc !important; }
 }
 
 /* 🔥 INTERAKTYWNE MENU RADIOWE 🔥 */
-/* ZABICIE BIAŁYCH KROPEK STREAMLITA: */
 [data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
 
 div[role="radiogroup"] > label {
@@ -146,7 +146,7 @@ div[role="radiogroup"] > label p {
     font-size: 1rem !important; 
     margin-left: 10px !important; 
     font-weight: 500 !important;
-    white-space: nowrap !important; /* Zapobiega łamaniu wierszy! */
+    white-space: nowrap !important;
 }
 div[role="radiogroup"] > label[data-checked="true"] p { 
     font-weight: 800 !important; 
@@ -179,7 +179,7 @@ div[data-testid="stSidebar"] .stButton > button:hover {
 }
 
 /* ========================================= */
-/* 🔥 KARTY DASHBOARDU - WYMUSZENIE STYLÓW 🔥*/
+/* 🔥 KARTY DASHBOARDU 🔥                    */
 /* ========================================= */
 .dashboard-header { display: flex !important; align-items: center !important; margin-bottom: 0.5rem !important; }
 .dashboard-title-icon { font-size: 1.8rem !important; margin-right: 10px !important; }
@@ -271,7 +271,10 @@ if st.session_state["zalogowany"] is None:
                 
                 # Wczytanie UI
                 op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
-                st.session_state.bg_opacity, st.session_state.bg_blur = op, bl
+                # BEZPIECZNIKI
+                st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
+                st.session_state.bg_blur = max(0, min(20, int(bl)))
+                
                 st.rerun()
             else:
                 st.error("Błędny PIN!")
@@ -283,7 +286,6 @@ else:
         st.markdown('<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sidebar-subheader">Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
         
-        # ZMIANA NAZW ABY NIE ŁAMAŁY SIĘ W PASKU
         if uzytkownik == "Łukasz":
             wybor = st.radio("M", ["⚙️ Dashboard", "➕ Nowy Wpis", "🏭 Logistyka", "🛠️ Konsola Admin.", "📂 Archiwum"], label_visibility="collapsed")
         elif uzytkownik == "Dawid":
