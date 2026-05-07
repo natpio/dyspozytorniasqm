@@ -28,7 +28,7 @@ if bg_img_base64:
 else:
     bg_img_url = "" 
 
-# --- CSS Z AKTUALIZACJĄ TŁA (BEZ BŁĘDU F-STRINGA) ---
+# --- CSS Z AKTUALIZACJĄ TŁA ---
 local_css_string = """
 /* --- 1. UKRYWANIE ELEMENTÓW STREAMLITA (ZNAKI WODNE) --- */
 [data-testid="stHeader"] { display: none !important; }
@@ -36,7 +36,7 @@ footer { display: none !important; }
 #MainMenu { visibility: hidden !important; }
 .stDeployButton { display: none !important; }
 
-/* --- 2. NOWE TŁO Z PLIKU (Z EFEKTEM MROŻONEGO SZKŁA) --- */
+/* --- 2. NOWE TŁO Z PLIKU (Z EFEKTEM GĘSTEGO MROŻONEGO SZKŁA) --- */
 .stApp {
     background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
     background-size: cover !important;
@@ -45,18 +45,22 @@ footer { display: none !important; }
     background-color: #f7f9fc !important; 
 }
 
-/* Nakładka "mrożonego szkła" dla wyciszenia tła i poprawy czytelności */
+/* Nakładka "mrożonego szkła" - TERAZ ZNACZNIE BARDZIEJ ZAMGLONA */
 .stApp::before {
     content: "";
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(247, 249, 252, 0.85); 
-    backdrop-filter: blur(2px); 
-    z-index: -1;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(247, 249, 252, 0.92); /* Mocne krycie (92%) */
+    backdrop-filter: blur(12px); /* Bardzo mocne rozmycie */
+    -webkit-backdrop-filter: blur(12px); /* Dla Safari/iOS */
+    z-index: 0;
+    pointer-events: none; /* Ważne: żeby warstwa nie blokowała klikania w formularze */
 }
 
-/* Globalny kolor tekstu - głęboki granat dla maksymalnej czytelności na teksturze */
-.main {
+/* Gwarancja, że zawartość leży nad mgłą */
+.appview-container, .main {
+    position: relative;
+    z-index: 1;
     color: #0f172a;
 }
 
@@ -65,6 +69,7 @@ section[data-testid="stSidebar"] {
     background-color: #1a2233 !important;
     color: #ffffff !important;
     padding-top: 1rem;
+    z-index: 100;
 }
 section[data-testid="stSidebar"] * {
     color: #ffffff !important;
