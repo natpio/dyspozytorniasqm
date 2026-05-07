@@ -5,3 +5,4 @@ google-auth
 streamlit-autorefresh
 plotly
 extra-streamlit-components
+streamlit-calendar
