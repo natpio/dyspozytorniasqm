@@ -7,13 +7,12 @@ import ui_dawid
 import ui_magazyn
 import database
 import base64
-import time
 
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v8_final")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v9_final")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -22,17 +21,14 @@ if "zalogowany" not in st.session_state:
 if "wybrane_konto" not in st.session_state:
     st.session_state["wybrane_konto"] = None
 
-# Blokada, która pilnuje, żeby po wylogowaniu nie nastąpił auto-login
 if "blokada_autologowania" not in st.session_state:
     st.session_state["blokada_autologowania"] = False
 
 # --- 4. LOGIKA LOGOWANIA / WYLOGOWANIA ---
-
-# Pobieramy ciasteczko
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
-# Jeżeli użytkownik jest wylogowany w sesji, ale ma ciasteczko - próbujemy autologowania
-# POD WARUNKIEM, że nie kliknął przed chwilą "Wyloguj"
+# Automatyczne logowanie z ciasteczka 
+# (Zabezpieczone flagą przed zapętleniem wylogowania)
 if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
     # Wczytujemy ustawienia UI
@@ -40,7 +36,7 @@ if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.sessi
     st.session_state.bg_opacity = op
     st.session_state.bg_blur = bl
 
-# Domyślne wartości UI (na wypadek braku w bazie)
+# Domyślne wartości UI
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
@@ -117,16 +113,6 @@ div[role="radiogroup"] > label[data-checked="true"] p { color: #5d9cec !importan
 div[role="radiogroup"] > label span[data-baseweb="radio"] { display: none !important; }
 div[role="radiogroup"] > label p { font-size: 1rem; margin-left: 10px; color: #ffffff !important;}
 
-/* PRZYCISKI */
-.stButton > button { border-radius: 12px !important; font-weight: bold !important; }
-div[data-testid="stSidebar"] .stButton > button {
-    background-color: #8e44ad !important;
-    color: white !important;
-    border: none !important;
-    padding: 10px !important;
-    width: 100%;
-}
-
 /* KARTY DASHBOARDU */
 .card-container { background: white !important; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border: 1px solid #e2e8f0; }
 .card-info { display: flex; flex-direction: column; }
@@ -165,11 +151,11 @@ if st.session_state["zalogowany"] is None:
     if st.session_state["wybrane_konto"]:
         st.markdown(f"Logowanie do: **{st.session_state['wybrane_konto']}**")
         pin = st.text_input("Podaj PIN", type="password")
-        if st.button("Zaloguj", type="primary"):
+        if st.button("Zaloguj", type="primary", use_container_width=True):
             key = st.session_state["wybrane_konto"].lower().replace("ł", "l")
             if pin == str(st.secrets["passwords"][key]):
                 st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
-                st.session_state["blokada_autologowania"] = False # Zdejmujemy blokadę przy ręcznym logowaniu
+                st.session_state["blokada_autologowania"] = False 
                 
                 # Zapis ciasteczka na 30 dni
                 waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
@@ -203,13 +189,15 @@ else:
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity", on_change=zapisz_zmiany_ui)
                 st.slider("Rozmycie", 0, 20, step=1, key="bg_blur", on_change=zapisz_zmiany_ui)
 
-        if st.button("Wyloguj się", use_container_width=True):
-            # 1. Kasujemy ciasteczko
-            cookie_manager.delete("zalogowany")
-            # 2. Czyścimy sesję
+        # BEZPIECZNE WYLOGOWANIE Z TRY-EXCEPT (ROZWIĄZANIE PROBLEMU)
+        if st.button("Wyloguj się", use_container_width=True, type="primary"):
+            try:
+                cookie_manager.delete("zalogowany")
+            except KeyError:
+                pass # Ignorujemy błąd, jeśli ciasteczko już nie istnieje w pamięci podręcznej
+                
             st.session_state["zalogowany"] = None
             st.session_state["wybrane_konto"] = None
-            # 3. Aktywujemy blokadę, żeby skrypt nie wczytał starego ciasteczka przy rerun
             st.session_state["blokada_autologowania"] = True
             st.rerun()
 
