@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import database
-import plotly.express as px
 
 # Lista 8 zdefiniowanych typów akcji (Rental i Realizacja)
 TYPY_AKCJI = [
@@ -17,17 +16,18 @@ TYPY_AKCJI = [
 ]
 
 def style_df(styler):
-    """Funkcja pomocnicza do stylizowania tabel"""
-    styler.set_properties(**{'border-radius': '10px'})
+    """Funkcja pomocnicza do stylizowania tabel dopasowana do ciemnego motywu"""
+    styler.set_properties(**{'border-radius': '10px', 'background-color': 'transparent'})
     styler.set_table_styles([
-        {'selector': 'th', 'props': [('background-color', '#34495e'), ('color', '#ffffff'), ('font-weight', 'bold'), ('text-transform', 'uppercase'), ('font-size', '0.75rem'), ('letter-spacing', '0.05em')]},
-        {'selector': 'td', 'props': [('border-bottom', '1px solid #f1f4f8'), ('padding', '10px 15px')]},
+        {'selector': 'th', 'props': [('background-color', 'rgba(0,0,0,0.2)'), ('color', '#f8fafc'), ('font-weight', 'bold'), ('text-transform', 'uppercase'), ('font-size', '0.75rem'), ('letter-spacing', '0.05em')]},
+        {'selector': 'td', 'props': [('border-bottom', '1px solid rgba(255,255,255,0.05)'), ('padding', '10px 15px')]},
     ])
     def stripe_rows(row):
-        return ['background-color: #f7f9fc' if row.name % 2 != 0 else 'background-color: white' for _ in row]
+        return ['background-color: transparent' for _ in row]
     styler.apply(stripe_rows, axis=1)
     return styler
 
+@st.fragment
 def pokaz_dashboard():
     # --- NAGŁÓWEK ---
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📊</span><span class="dashboard-title">Centrum Dowodzenia</span></div>', unsafe_allow_html=True)
@@ -40,13 +40,13 @@ def pokaz_dashboard():
     
     # --- KARTY STATYSTYK ---
     wszystkie = len(df_dzis)
-    nowe = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane'])]) if not df_dzis.empty else 0
+    nowe = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if not df_dzis.empty else 0
     w_trakcie = len(df_dzis[df_dzis['Status'] == 'W drodze']) if not df_dzis.empty else 0
     zakonczone = len(df_dzis[df_dzis['Status'] == 'Zakończone']) if not df_dzis.empty else 0
     
     cards = [
         {"class": "wszystkie-zlecenia", "title": "Całkowity Wolumen", "value": wszystkie, "date_icon": "📅", "date_text": f"Na dzień {dzis}", "card_icon": "📦"},
-        {"class": "nowe", "title": "Oczekujące / Zaakceptowane", "value": nowe, "date_icon": "🔥", "date_text": "Przed realizacją", "card_icon": "⏳"},
+        {"class": "nowe", "title": "Oczekujące / Awizacje", "value": nowe, "date_icon": "🔥", "date_text": "Przed realizacją", "card_icon": "⏳"},
         {"class": "w-trakcie", "title": "W trakcie", "value": w_trakcie, "date_icon": "🚜", "date_text": "W realizacji", "card_icon": "🚚"},
         {"class": "zakonczone", "title": "Zakończone", "value": zakonczone, "date_icon": "✅", "date_text": "Skończone", "card_icon": "🏆"}
     ]
@@ -89,7 +89,7 @@ def pokaz_dashboard():
         st.markdown('<br>', unsafe_allow_html=True)
 
         # 2. TABELA ZLECEŃ WYJAZDOWYCH
-        st.markdown(f'<div class="table-header" style="color:#2563eb;">🚚 WYJAZDY: Dowóz / Odbiór u klienta</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="table-header" style="color:#3b82f6;">🚚 WYJAZDY: Dowóz / Odbiór u klienta</div>', unsafe_allow_html=True)
         if not df_wyjazdy.empty:
             df_w_disp = df_wyjazdy[['Godzina', 'Lokalizacja', 'Nr Projektu', 'Klient', 'Kontakt', 'Wykonawca', 'Auto', 'Status']].copy()
             df_w_disp['Lokalizacja'] = df_w_disp['Lokalizacja'].apply(lambda x: f"📍 {x}")
@@ -103,10 +103,10 @@ def pokaz_dashboard():
     else:
         st.info("Brak zleceń na dzisiaj. Baza jest pusta.")
 
-
+@st.fragment
 def pokaz_formularz():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">➕</span><span class="dashboard-title">Nowy Wpis</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Wprowadź precyzyjne dane dla Logistyki lub Magazynu.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Wprowadź dane dla Logistyki. Dzięki technologii <i>Fragments</i> dodanie odbywa się cicho w tle.</div>', unsafe_allow_html=True)
     
     with st.form("nowe_zadanie_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -126,33 +126,29 @@ def pokaz_formularz():
             kontakt = st.text_input("Telefon Kontaktowy")
             kto_odbiera = st.text_input("Kto odbiera (Imię i Nazwisko / Magazynier)")
 
-        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: rgba(255,255,255,0.05); margin: 10px 0;'>", unsafe_allow_html=True)
         if st.form_submit_button("Zapisz Zlecenie w Bazie", type="primary"):
-            # Formatujemy ID zadania
             id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
-            
-            # Łączenie numeru z nazwiskiem (żeby nie psuć bazy, trzymamy to w jednej kolumnie Kontakt)
             pelny_kontakt = f"{kontakt} | Odbiór: {kto_odbiera}" if kto_odbiera else kontakt
-            
-            # Logika przypisywania: Magazyn idzie do Łukasza, Wyjazdy do Dawida
             wykonawca = "Łukasz (Magazyn)" if "Magazyn" in typ_akcji else "Dawid"
             status = "Awizacja" if "Magazyn" in typ_akcji else "Nowe"
 
             nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, typ_akcji, nr_projektu, klient, lokalizacja, pelny_kontakt, auto, status, wykonawca]
             database.dodaj_zadanie(nowy_wiersz)
             
-            st.toast(f"✅ Dodano zadanie! Przypisano do: {wykonawca}", icon="🚀")
-            st.cache_resource.clear()
+            # Formularz wyczyści się sam (clear_on_submit=True), a my pokażemy tylko powiadomienie
+            st.toast(f"✅ Zlecenie dodane! Przypisano do: {wykonawca}", icon="🚀")
 
+@st.fragment
 def pokaz_zarzadzanie():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🛠️</span><span class="dashboard-title">Konsola Administracyjna</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Edycja i archiwizacja rekordów bazy danych.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Błyskawiczna zmiana statusów i edycja rekordów (bez przeładowania aplikacji).</div>', unsafe_allow_html=True)
     
     dane = database.pobierz_wszystkie_dane()
     if dane:
         df = pd.DataFrame(dane)
         df['Data_sort'] = pd.to_datetime(df['Data'], format='%Y-%m-%d', errors='coerce')
-        df = df.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
+        df = df.sort_values(by=['Data_sort', 'Godzina'], ascending=[False, True]).drop(columns=['Data_sort'])
         
         wyszukiwarka = st.text_input("🔍 Szukaj po nazwie klienta lub projekcie...", "")
         lista_opcji = (df['ID'].astype(str) + " | " + df['Data'].astype(str) + " | " + df['Klient'].astype(str) + " - " + df['Typ Akcji'].astype(str)).tolist()
@@ -170,6 +166,28 @@ def pokaz_zarzadzanie():
             wybrane_id = wybor.split(" | ")[0]
             wiersz = df[df['ID'].astype(str) == wybrane_id].iloc[0]
             
+            # --- SEKCJA: Szybka Zmiana Statusu ---
+            st.markdown("### ⚡ Szybka Zmiana Statusu")
+            aktualny_status = wiersz['Status']
+            statusy_opcje = ["Nowe", "Zaakceptowane", "W drodze", "Zakończone", "Awizacja"]
+            
+            col_s1, col_s2 = st.columns([3, 1])
+            with col_s1:
+                nowy_status_szybki = st.selectbox(
+                    "Wybierz nowy status", 
+                    statusy_opcje, 
+                    index=statusy_opcje.index(aktualny_status) if aktualny_status in statusy_opcje else 0,
+                    label_visibility="collapsed"
+                )
+            with col_s2:
+                if st.button("Aktualizuj Status", use_container_width=True):
+                    database.aktualizuj_status(wybrane_id, nowy_status_szybki)
+                    st.toast("Status zaktualizowany pomyślnie!", icon="✨")
+
+            st.markdown("<hr style='border-color: rgba(255,255,255,0.05); margin: 20px 0;'>", unsafe_allow_html=True)
+            
+            # --- SEKCJA: Pełna Edycja Danych ---
+            st.markdown("### 📝 Pełna Edycja Danych")
             with st.form("formularz_edycji"):
                 e_k1, e_k2 = st.columns(2)
                 with e_k1:
@@ -180,7 +198,7 @@ def pokaz_zarzadzanie():
                     n_dzial = st.selectbox("Dział", dzial_options, index=dzial_idx)
                     n_klient = st.text_input("Klient", value=str(wiersz['Klient']))
                 with e_k2:
-                    n_status = st.text_input("Status", value=str(wiersz['Status']))
+                    n_status = st.text_input("Status (Ręcznie)", value=str(wiersz['Status']))
                     n_lokalizacja = st.text_input("Lokalizacja", value=str(wiersz['Lokalizacja']))
                     n_kontakt = st.text_input("Kontakt / Osoba", value=str(wiersz['Kontakt']))
                     n_wykonawca = st.text_input("Wykonawca", value=str(wiersz['Wykonawca']))
@@ -188,31 +206,28 @@ def pokaz_zarzadzanie():
                 if st.form_submit_button("Zapisz Zmiany"):
                     zaktualizowany_wiersz = [wiersz['ID'], n_data, n_godzina, n_dzial, wiersz['Typ Akcji'], wiersz['Nr Projektu'], n_klient, n_lokalizacja, n_kontakt, wiersz['Auto'], n_status, n_wykonawca]
                     database.edytuj_zadanie(wybrane_id, zaktualizowany_wiersz)
-                    st.toast("Zmiany zapisane w bazie!", icon="💾")
-                    st.cache_resource.clear()
-                    st.rerun()
+                    st.toast("Zmiany zapisane w bazie! 💾", icon="💾")
 
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("📦 Przenieś do Archiwum", type="primary", use_container_width=True):
                     database.archiwizuj_zadanie(wybrane_id)
-                    st.cache_resource.clear()
-                    st.rerun()
+                    st.toast("Zlecenie przeniesione do archiwum!", icon="📦")
             with c2:
                 if st.button("🗑️ Usuń bezpowrotnie", type="secondary", use_container_width=True):
                     database.usun_zadanie(wybrane_id)
-                    st.cache_resource.clear()
-                    st.rerun()
+                    st.toast("Rekord został trwale usunięty!", icon="🗑️")
     else:
         st.info("Brak zadań w bazie.")
 
+@st.fragment
 def pokaz_archiwum():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📂</span><span class="dashboard-title">Archiwum Cyfrowe</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Pełen rejestr zakończonych operacji.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Pełen rejestr zakończonych operacji. Pobierane dynamicznie z bazy.</div>', unsafe_allow_html=True)
+    
     if st.button("🔄 Odśwież Dane z Chmury"):
-        st.cache_resource.clear()
-        st.toast("Dane zsynchronizowane!", icon="☁️")
-        st.rerun()
+        st.toast("Pobieram najnowsze dane...", icon="☁️")
+    
     dane_archiwum = database.pobierz_archiwum()
     if dane_archiwum:
         df_arch = pd.DataFrame(dane_archiwum)
@@ -223,8 +238,10 @@ def pokaz_archiwum():
     else:
         st.info("Archiwum jest obecnie puste.")
 
+@st.fragment
 def pokaz_magazyn():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🏭</span><span class="dashboard-title">Logistyka Magazynowa</span></div>', unsafe_allow_html=True)
+    
     dane = database.pobierz_wszystkie_dane()
     if not dane:
         st.info("Brak zadań w bazie.")
@@ -241,7 +258,6 @@ def pokaz_magazyn():
     df_dzien['Data_sort'] = pd.to_datetime(df_dzien['Data'], format='%Y-%m-%d', errors='coerce')
     df_dzien = df_dzien.sort_values(by=['Godzina']).drop(columns=['Data_sort'])
 
-    # Dostosowanie wyszukiwania pod nowe nazwy (8 typów)
     df_wydania = df_dzien[df_dzien['Typ Akcji'].str.contains("Dowóz|Odbiór przez klienta", case=False)]
     df_przyjecia = df_dzien[df_dzien['Typ Akcji'].str.contains("Odbiór -|Zwrot przez klienta", case=False)]
 
@@ -254,11 +270,11 @@ def pokaz_magazyn():
             <div class="card-container" style="opacity: {opacity}; display:block; padding:15px; border-left: 5px solid #e67e22; margin-bottom:15px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                     <strong style="font-size:1.2rem; color:#e67e22;">⏰ {row['Godzina']}</strong>
-                    <span class="card-date-pill" style="background-color:#fffbeb; color:#d97706; font-weight:bold;">🚚 {row['Wykonawca']} ({row['Auto']})</span>
+                    <span class="card-date-pill" style="background-color:rgba(230, 126, 34, 0.1); color:#e67e22; font-weight:bold;">🚚 {row['Wykonawca']} ({row['Auto']})</span>
                 </div>
                 <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Projekt:</strong> {row['Nr Projektu']}</div>
                 <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Klient:</strong> {row['Klient']}</div>
-                <div style="font-size:0.85rem; color:#64748b; margin-top:10px; border-top: 1px solid #eee; padding-top: 5px;"><strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}</div>
+                <div style="font-size:0.85rem; color:#94a3b8; margin-top:10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;"><strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}</div>
             </div>""", unsafe_allow_html=True)
 
     with col2:
@@ -269,9 +285,9 @@ def pokaz_magazyn():
             <div class="card-container" style="opacity: {opacity}; display:block; padding:15px; border-left: 5px solid #27ae60; margin-bottom:15px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                     <strong style="font-size:1.2rem; color:#27ae60;">⏰ {row['Godzina']}</strong>
-                    <span class="card-date-pill" style="background-color:#f0fdf4; color:#16a34a; font-weight:bold;">🚚 {row['Wykonawca']} ({row['Auto']})</span>
+                    <span class="card-date-pill" style="background-color:rgba(39, 174, 96, 0.1); color:#27ae60; font-weight:bold;">🚚 {row['Wykonawca']} ({row['Auto']})</span>
                 </div>
                 <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Projekt:</strong> {row['Nr Projektu']}</div>
                 <div style="font-size:0.95rem; margin-bottom:5px;"><strong>Klient:</strong> {row['Klient']}</div>
-                <div style="font-size:0.85rem; color:#64748b; margin-top:10px; border-top: 1px solid #eee; padding-top: 5px;"><strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}</div>
+                <div style="font-size:0.85rem; color:#94a3b8; margin-top:10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;"><strong>Akcja:</strong> {row['Typ Akcji']} | <strong>Status:</strong> {row['Status']}</div>
             </div>""", unsafe_allow_html=True)
