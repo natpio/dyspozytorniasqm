@@ -95,25 +95,32 @@ def pobierz_ustawienia_uzytkownika(uzytkownik):
         for r in rekordy:
             if str(r.get('Uzytkownik', '')) == str(uzytkownik):
                 return float(r.get('Opacity', 0.75)), int(r.get('Blur', 4))
-    except Exception:
-        # Zakładka Ustawienia jeszcze nie istnieje lub jest pusta
+    except Exception as e:
+        print(f"Błąd pobierania ustawień: {e}")
         pass
     
-    return 0.75, 4  # Wartosci domyslne, jesli brak danych
+    return 0.75, 4  # Wartosci domyslne, jesli uzytkownik nie ma jeszcze zapisanych ustawien
 
 def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
     """Zapisuje lub aktualizuje ustawienia w arkuszu 'Ustawienia'."""
     try:
         arkusz = get_worksheet("Ustawienia")
-        try:
-            # Próbujemy znaleźć użytkownika w arkuszu
-            komorka = arkusz.find(str(uzytkownik))
-            if komorka:
-                # Aktualizacja - zakładamy, że Kolumna B to Opacity, a C to Blur
-                arkusz.update_cell(komorka.row, 2, float(opacity))
-                arkusz.update_cell(komorka.row, 3, int(blur))
-        except gspread.exceptions.CellNotFound:
-            # Użytkownika jeszcze nie ma - dodajemy nowy wiersz
+        rekordy = arkusz.get_all_records()
+        
+        wiersz_do_aktualizacji = None
+        # Szukamy, w którym wierszu jest nasz użytkownik (na wypadek, gdy funkcja find() z gspread zawiedzie)
+        for i, r in enumerate(rekordy):
+            if str(r.get('Uzytkownik', '')) == str(uzytkownik):
+                wiersz_do_aktualizacji = i + 2  # +2 bo wiersz 1 to nagłówki, a Python liczy listy od zera
+                break
+                
+        if wiersz_do_aktualizacji:
+            # Aktualizacja istniejącego wpisu użytkownika (Kolumna 2 to Opacity, 3 to Blur)
+            arkusz.update_cell(wiersz_do_aktualizacji, 2, float(opacity))
+            arkusz.update_cell(wiersz_do_aktualizacji, 3, int(blur))
+        else:
+            # Użytkownika nie ma jeszcze na liście - dodajemy nowy wiersz na samym dole
             arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
+            
     except Exception as e:
-        print(f"Błąd zapisu ustawień (upewnij się, że masz zakładkę 'Ustawienia'): {e}")
+        print(f"Błąd zapisu ustawień: {e}")
