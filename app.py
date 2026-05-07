@@ -2,23 +2,35 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import ui_lukasz
 import ui_dawid
+import database
 import base64
 
-# Konfiguracja strony musi być na samej górze
+# 1. KONFIGURACJA STRONY (Musi być na samym początku)
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
-# --- INICJALIZACJA ZMIENNYCH SESYJNYCH ---
+# 2. INICJALIZACJA ZMIENNYCH SESYJNYCH
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
-# Zmienne dla naszego ukrytego panelu UI (domyślne ustawienia "złotego środka")
+# Domyślne wartości UI (zostaną nadpisane z bazy danych po zalogowaniu)
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# --- FUNKCJA DO ŁADOWANIA OBRAZU TŁA ---
+# 3. FUNKCJA POMOCNICZA: ZAPIS USTAWIEŃ DO BAZY
+def zapisz_zmiany_ui():
+    """Wysyła aktualne wartości suwaków bezpośrednio do Google Sheets"""
+    if st.session_state["zalogowany"]:
+        database.zapisz_ustawienia_uzytkownika(
+            st.session_state["zalogowany"], 
+            st.session_state.bg_opacity, 
+            st.session_state.bg_blur
+        )
+
+# 4. FUNKCJA DO ŁADOWANIA OBRAZU TŁA
 def get_base64_of_bin_file(bin_file):
+    """Konwertuje obraz na format tekstowy dla CSS"""
     try:
         with open(bin_file, 'rb') as f:
             data = f.read()
@@ -28,21 +40,17 @@ def get_base64_of_bin_file(bin_file):
 
 # Zakoduj plik tlolukasz2.png do Base64
 bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
+bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
-if bg_img_base64:
-    bg_img_url = f"data:image/png;base64,{bg_img_base64}"
-else:
-    bg_img_url = "" 
-
-# --- CSS Z DYNAMICZNYMI PARAMETRAMI ---
+# 5. PEŁNY KOD CSS (White Label + Dynamiczne Tło + Menu)
 local_css_string = """
-/* --- 1. UKRYWANIE ELEMENTÓW STREAMLITA (ZNAKI WODNE) --- */
+/* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
 [data-testid="stHeader"] { display: none !important; }
 footer { display: none !important; }
 #MainMenu { visibility: hidden !important; }
 .stDeployButton { display: none !important; }
 
-/* --- 2. NOWE TŁO Z PLIKU --- */
+/* DYNAMICZNE TŁO Z EFEKTEM MROŻONEGO SZKŁA */
 .stApp {
     background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
     background-size: cover !important;
@@ -51,7 +59,6 @@ footer { display: none !important; }
     background-color: #f7f9fc !important; 
 }
 
-/* Nakładka "mrożonego szkła" - STEROWANA SUWAKAMI */
 .stApp::before {
     content: "";
     position: fixed;
@@ -63,44 +70,26 @@ footer { display: none !important; }
     pointer-events: none; 
 }
 
-/* Gwarancja, że zawartość leży nad tłem */
+/* KONTENER GŁÓWNY */
 .appview-container, .main {
     position: relative;
     z-index: 1;
     color: #0f172a;
 }
 
-/* --- 3. STYLIZACJA PASKA BOCZNEGO (Sidebar) --- */
+/* STYLIZACJA PASKA BOCZNEGO */
 section[data-testid="stSidebar"] {
     background-color: #1a2233 !important;
     color: #ffffff !important;
     padding-top: 1rem;
     z-index: 100;
 }
-section[data-testid="stSidebar"] * {
-    color: #ffffff !important;
-}
 
-/* Magia CSS dla paska bocznego - usunięcie sztywnego pozycjonowania na rzecz naturalnego układu */
-.sidebar-footer-text { 
-    color: #8da1b3 !important; 
-    font-size: 0.75rem; 
-    border-top: 1px solid #3d495f; 
-    padding-top: 15px; 
-    margin-bottom: 5px; 
-}
+.sidebar-header { font-size: 1.2rem; font-weight: bold; padding: 0 1rem 1rem 1rem; border-bottom: 1px solid #3d495f; margin-bottom: 1rem; color: white; }
+.sidebar-subheader { font-size: 0.8rem; color: #8da1b3 !important; padding: 0 1rem 1.5rem 1rem; }
+.sidebar-menu-header { font-size: 0.75rem; color: #8da1b3 !important; padding: 0 1rem; margin-top: 1rem; text-transform: uppercase; }
 
-section[data-testid="stSidebar"] .stButton > button {
-    background-color: #8e44ad !important;
-    color: white !important;
-    border-radius: 12px !important;
-    border: none;
-    font-size: 0.9rem;
-    padding: 10px;
-    margin-top: 10px;
-}
-
-/* --- MAGIA CSS: Przerabiamy standardowe st.radio na Twoje przyciski --- */
+/* PRZYCISKI MENU (RADIO) */
 div[role="radiogroup"] > label {
     display: flex;
     align-items: center;
@@ -111,91 +100,62 @@ div[role="radiogroup"] > label {
     transition: background-color 0.2s;
     background-color: transparent;
 }
-div[role="radiogroup"] > label:hover {
-    background-color: #2b3a53;
-}
-div[role="radiogroup"] > label[data-checked="true"], 
-div[role="radiogroup"] > label[aria-checked="true"] {
-    background-color: #2b3a53;
-}
-div[role="radiogroup"] > label[data-checked="true"] p, 
-div[role="radiogroup"] > label[aria-checked="true"] p {
-    color: #5d9cec !important;
-    font-weight: bold !important;
-}
-div[role="radiogroup"] > label span[data-baseweb="radio"] div:first-child {
-    display: none !important;
-}
-div[role="radiogroup"] > label p {
-    font-size: 0.95rem;
-    margin-left: 10px;
-}
+div[role="radiogroup"] > label:hover { background-color: #2b3a53; }
+div[role="radiogroup"] > label[data-checked="true"] { background-color: #2b3a53; }
+div[role="radiogroup"] > label[data-checked="true"] p { color: #5d9cec !important; font-weight: bold !important; }
+div[role="radiogroup"] > label span[data-baseweb="radio"] div:first-child { display: none !important; }
 
-.sidebar-header { font-size: 1.2rem; font-weight: bold; padding: 0 1rem 1rem 1rem; border-bottom: 1px solid #3d495f; margin-bottom: 1rem; }
-.sidebar-subheader { font-size: 0.8rem; color: #8da1b3 !important; padding: 0 1rem 1.5rem 1rem; }
-.sidebar-menu-header { font-size: 0.75rem; color: #8da1b3 !important; padding: 0 1rem; margin-top: 1rem; text-transform: uppercase; }
-
-.dashboard-header { display: flex; align-items: center; margin-bottom: 0.5rem; }
-.dashboard-title-icon { font-size: 1.8rem; margin-right: 10px; color: #8da1b3; }
-.dashboard-title { font-size: 1.8rem; font-weight: bold; color: #333; }
-.dashboard-subheader { font-size: 0.9rem; color: #6c757d; margin-bottom: 2rem; }
-
-/* Karty i Tabele */
-.card-container { background: linear-gradient(145deg, #ffffff, #f8fafc); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; transition: transform 0.2s; border: 1px solid #e2e8f0; }
-.card-container:hover { transform: translateY(-3px); }
-.card-info { display: flex; flex-direction: column; }
-.card-title { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
-.card-value { font-size: 2.2rem; font-weight: bold; color: #0f172a; margin-bottom: 15px; }
-.card-date-pill { display: flex; align-items: center; border-radius: 15px; padding: 4px 10px; font-size: 0.75rem; }
-.card-date-icon { margin-right: 5px; font-size: 0.8rem; }
-.card-icon { font-size: 2.5rem; }
-
-.nowe .card-date-pill { background-color: rgba(230, 126, 34, 0.1); color: #e67e22; }
-.w-trakcie .card-date-pill { background-color: rgba(241, 196, 15, 0.1); color: #f1c40f; }
-.zakonczone .card-date-pill { background-color: rgba(39, 174, 96, 0.1); color: #27ae60; }
-.wszystkie-zlecenia .card-date-pill { background-color: rgba(93, 156, 236, 0.1); color: #5d9cec; }
-
-.table-header { font-size: 1.1rem; font-weight: bold; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem; }
-.dataframe { border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; background-color: white !important; }
+/* STOPKA PASKA BOCZNEGO */
+.sidebar-footer-text { 
+    color: #8da1b3 !important; 
+    font-size: 0.75rem; 
+    border-top: 1px solid #3d495f; 
+    padding-top: 15px; 
+    margin-bottom: 5px; 
+}
 """
 
-# Dynamiczna podmiana wartości z pamięci sesji
+# Podmiana dynamicznych wartości w CSS
 local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
 local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(st.session_state.bg_opacity))
 local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(st.session_state.bg_blur))
 
 st.markdown(f'<style>{local_css_string}</style>', unsafe_allow_html=True)
 
-# --- EKRAN LOGOWANIA ---
+# 6. EKRAN LOGOWANIA
 if st.session_state["zalogowany"] is None:
-    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🔐</span><span class="dashboard-title">SQM DISPATCH</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Zaloguj się podając PIN.</div>', unsafe_allow_html=True)
+    st.markdown('<h2 style="color: #1a2233;">🔐 SQM DISPATCH - Logowanie</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748b;">Podaj swój kod PIN, aby uzyskać dostęp.</p>', unsafe_allow_html=True)
     
     col1, _ = st.columns([1, 3])
     with col1:
         pin = st.text_input("Kod PIN", type="password")
-        if st.button("Zaloguj", type="primary"):
-            if pin == "1234":
-                st.session_state["zalogowany"] = "Łukasz"
-                st.rerun()
-            elif pin == "5678":
-                st.session_state["zalogowany"] = "Dawid"
+        if st.button("Zaloguj", type="primary", use_container_width=True):
+            imie = None
+            if pin == "1234": imie = "Łukasz"
+            elif pin == "5678": imie = "Dawid"
+            
+            if imie:
+                st.session_state["zalogowany"] = imie
+                # WCZYTYWANIE USTAWIEŃ OSOBISTYCH Z BAZY
+                op, bl = database.pobierz_ustawienia_uzytkownika(imie)
+                st.session_state.bg_opacity = op
+                st.session_state.bg_blur = bl
                 st.rerun()
             else:
                 st.error("Błędny PIN!")
 
-# --- PO ZALOGOWANIU ---
+# 7. INTERFEJS PO ZALOGOWANIU
 else:
     uzytkownik = st.session_state["zalogowany"]
     
-    # --- PANEL BOCZNY (Sidebar) ---
     with st.sidebar:
-        st.markdown('<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sidebar-subheader">Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="sidebar-menu-header">MENU</div>', unsafe_allow_html=True)
         
-        # Wybór zakładki
+        # Nawigacja zależna od uprawnień
         if uzytkownik == "Łukasz":
             wybor = st.radio("Nawigacja", [
                 "⚙️ Dashboard", 
@@ -204,31 +164,28 @@ else:
                 "🛠️ Konsola Administracyjna", 
                 "📂 Archiwum Cyfrowe"
             ], label_visibility="collapsed")
-        elif uzytkownik == "Dawid":
-            wybor = st.radio("Nawigacja", [
-                "📱 Moje Zlecenia"
-            ], label_visibility="collapsed")
+        else:
+            wybor = st.radio("Nawigacja", ["📱 Moje Zlecenia"], label_visibility="collapsed")
 
-        # Przestrzeń wypełniająca (optyczne zepchnięcie elementów na sam dół)
+        # Pchnięcie stopki na dół
         st.markdown("<div style='min-height: 25vh;'></div>", unsafe_allow_html=True)
         
-        # --- STOPKA PASKA BOCZNEGO ---
-        # 1. Informacja kto jest zalogowany
+        # STOPKA PASKA BOCZNEGO
         st.markdown(f'<div class="sidebar-footer-text">SQM DISPATCH<br>Zalogowano jako: {uzytkownik}</div>', unsafe_allow_html=True)
         
-        # 2. Ukryte menu ustawień (wyłącznie dla Łukasza)
+        # UKRYTE USTAWIENIA UI (Tylko dla Łukasza)
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ukryte Ustawienia UI"):
                 st.markdown("<small>Dostosuj widoczność i rozmycie tła.</small>", unsafe_allow_html=True)
-                st.slider("Gęstość mgły (Krycie)", 0.0, 1.0, step=0.05, key="bg_opacity")
-                st.slider("Siła rozmycia (Blur)", 0, 20, step=1, key="bg_blur")
+                st.slider("Gęstość mgły", 0.0, 1.0, step=0.05, key="bg_opacity", on_change=zapisz_zmiany_ui)
+                st.slider("Siła rozmycia", 0, 20, step=1, key="bg_blur", on_change=zapisz_zmiany_ui)
 
-        # 3. Przycisk wylogowania zajmujący całą dostępną szerokość 
-        if st.button("Wyloguj się", use_container_width=True):
+        # PRZYCISK WYLOGOWANIA
+        if st.button("Wyloguj się", use_container_width=True, type="secondary"):
             st.session_state["zalogowany"] = None
             st.rerun()
 
-    # --- ROUTING (Przełączanie zakładek z plików ui_lukasz i ui_dawid) ---
+    # 8. ROUTING - WYWOŁYWANIE MODUŁÓW
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=30000, limit=None, key="odswiezanie_lukasz")
         
@@ -244,5 +201,4 @@ else:
             ui_lukasz.pokaz_archiwum()
             
     elif uzytkownik == "Dawid":
-        if wybor == "📱 Moje Zlecenia":
-            ui_dawid.pokaz_panel()
+        ui_dawid.pokaz_panel()
