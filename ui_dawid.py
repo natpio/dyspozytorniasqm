@@ -1,165 +1,118 @@
 import streamlit as st
 import pandas as pd
 import database
+from datetime import datetime
 
 def pokaz_panel():
-    # --- CSS SPECIFICZNY DLA PANELU DAWIDA ---
+    # --- CSS DLA MOBILNEGO WYGLĄDU DAWIDA ---
     st.markdown("""
     <style>
-    /* Stylowanie białych, zaokrąglonych kart mobilnych */
     .dawid-card {
         background-color: #ffffff;
         border-radius: 16px;
-        padding: 24px 20px;
+        padding: 20px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         border: 1px solid #f1f4f8;
-        margin-bottom: -10px; /* Przyciąga guzik do karty */
-        position: relative;
-        z-index: 1;
+        margin-bottom: 10px;
     }
-    .dawid-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    .dawid-time {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #2563eb; /* Niebieski jak we wzorcu */
-        margin-right: 10px;
-    }
-    .dawid-type {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-    .dawid-client {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 5px;
-    }
-    .dawid-address {
-        font-size: 0.85rem;
-        color: #64748b;
-        margin-bottom: 15px;
-    }
-    .dawid-project {
-        font-size: 0.75rem;
-        background-color: #f1f5f9;
-        color: #64748b;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: 500;
-        display: inline-block;
-    }
-    /* Pigułki statusów */
-    .badge-nowe {
-        background-color: #eff6ff;
-        color: #3b82f6;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .badge-w-trakcie {
-        background-color: #fffbeb;
-        color: #d97706;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
+    .dawid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .dawid-time { font-size: 1.2rem; font-weight: 800; color: #2563eb; }
+    .dawid-client { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .dawid-address { font-size: 0.9rem; color: #64748b; margin-bottom: 12px; }
     
-    /* HACK: Podmiana standardowych guzików Streamlit na mobilne, pełnej szerokości */
-    div[data-testid="stButton"] button p {
+    /* Pigułki statusów */
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .badge-nowe { background-color: #fee2e2; color: #dc2626; }
+    .badge-akcept { background-color: #e0f2fe; color: #0369a1; }
+    .badge-droga { background-color: #fef3c7; color: #d97706; }
+    .badge-fin { background-color: #d1fae5; color: #059669; }
+
+    /* Przyciski mobilne */
+    div[data-testid="stButton"] button {
+        border-radius: 12px !important;
         font-weight: 600 !important;
-        font-size: 1rem !important;
-    }
-    /* Typ PRIMARY = Przycisk "Rozpocznij" (Niebieski) */
-    button[kind="primary"] {
-        background-color: #1d4ed8 !important;
-        color: white !important;
-        border-radius: 12px !important;
-        border: none !important;
-        padding: 12px 0 !important;
-        box-shadow: 0 4px 10px rgba(29, 78, 216, 0.2) !important;
-        z-index: 2;
-    }
-    button[kind="primary"]:hover {
-        background-color: #1e40af !important;
-    }
-    /* Typ SECONDARY = Przycisk "Zakończ" (Pomarańczowy) */
-    button[kind="secondary"] {
-        background-color: #f59e0b !important;
-        color: white !important;
-        border-radius: 12px !important;
-        border: none !important;
-        padding: 12px 0 !important;
-        box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2) !important;
-        z-index: 2;
-    }
-    button[kind="secondary"]:hover {
-        background-color: #d97706 !important;
+        padding: 10px 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- NAGŁÓWEK ---
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📱</span><span class="dashboard-title">Panel Kierowcy</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Zadania przypisane do realizacji na dziś</div>', unsafe_allow_html=True)
-
+    
     dane = database.pobierz_wszystkie_dane()
     if not dane:
-        st.info("Brak zadań w systemie.")
+        st.info("Brak zadań przypisanych do Ciebie.")
         return
 
     df = pd.DataFrame(dane)
-    # Filtrujemy zadania przypisane do Dawida, które nie są jeszcze zakończone
-    aktywne_zadania = df[(df['Wykonawca'] == 'Dawid') & (df['Status'].isin(['Nowe', 'W drodze']))]
+    dzis = datetime.now().strftime("%Y-%m-%d")
+    
+    # Filtrowanie zadań Dawida na dziś
+    df_dawid = df[(df['Wykonawca'] == 'Dawid') & (df['Data'] == dzis)]
 
-    if aktywne_zadania.empty:
-        st.success("Wszystkie Twoje dzisiejsze zlecenia są zakończone! Możesz odpocząć. ☕")
-    else:
-        # Zwężamy widok, żeby aplikacja przypominała ekran smartfona
-        col_left, col_main, col_right = st.columns([1, 2, 1])
+    tab1, tab2 = st.tabs(["📋 Moje zadania", "🕒 Historia (Dziś)"])
+
+    with tab1:
+        aktywne = df_dawid[df_dawid['Status'].isin(['Nowe', 'Zaakceptowane', 'W drodze'])]
         
-        with col_main:
-            for index, row in aktywne_zadania.iterrows():
-                
-                # Ustalanie wyglądu w zależności od statusu zadania
-                if row['Status'] == 'Nowe':
-                    badge_html = '<span class="badge-nowe">Zaakceptowane</span>'
-                    button_label = "▶ Rozpocznij"
-                    button_kind = "primary" # Będzie wyłapane przez CSS jako Niebieski
-                    nowy_status = 'W drodze'
-                else:
-                    badge_html = '<span class="badge-w-trakcie">W trakcie</span>'
-                    button_label = "✓ Zakończ"
-                    button_kind = "secondary" # Będzie wyłapane przez CSS jako Pomarańczowy
-                    nowy_status = 'Zakończone'
+        if aktywne.empty:
+            st.success("Wszystkie zadania na dziś zostały wykonane! ✨")
+        else:
+            # Kontener centrujący dla widoku mobilnego
+            _, col_mid, _ = st.columns([0.1, 0.8, 0.1])
+            with col_mid:
+                for _, row in aktywne.iterrows():
+                    # Logika statusu i przycisku
+                    if row['Status'] == 'Nowe':
+                        status_html = '<span class="badge badge-nowe">Oczekuje</span>'
+                        btn_label = "👍 Akceptuj zlecenie"
+                        btn_kind = "primary" # Niebieski w app.py
+                        nowy_status = "Zaakceptowane"
+                    elif row['Status'] == 'Zaakceptowane':
+                        status_html = '<span class="badge badge-akcept">Zaakceptowane</span>'
+                        btn_label = "▶ Rozpocznij trasę"
+                        btn_kind = "primary" 
+                        nowy_status = "W drodze"
+                    else: # W drodze
+                        status_html = '<span class="badge badge-droga">W realizacji</span>'
+                        btn_label = "🏁 Zakończ zadanie"
+                        btn_kind = "secondary" # Pomarańczowy w app.py
+                        nowy_status = "Zakończone"
 
-                # Kod HTML samej wizytówki zadania
-                html_card = f"""
-                <div class="dawid-card">
-                    <div class="dawid-header">
-                        <div>
+                    # Karta zadania
+                    st.markdown(f"""
+                    <div class="dawid-card">
+                        <div class="dawid-header">
                             <span class="dawid-time">{row['Godzina']}</span>
-                            <span class="dawid-type">{row['Typ Akcji']}</span>
+                            {status_html}
                         </div>
-                        <div>{badge_html}</div>
+                        <div class="dawid-client">{row['Klient']}</div>
+                        <div class="dawid-address">📍 {row['Lokalizacja']}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8;">
+                            📦 {row['Typ Akcji']} | <b>PROJ: {row['Nr Projektu']}</b><br>
+                            👤 {row['Kontakt']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if st.button(btn_label, key=f"btn_{row['ID']}", type=btn_kind, use_container_width=True):
+                        database.aktualizuj_status(row['ID'], nowy_status)
+                        st.toast(f"Status zmieniony na: {nowy_status}")
+                        st.rerun()
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+    with tab2:
+        historia = df_dawid[df_dawid['Status'] == 'Zakończone']
+        if historia.empty:
+            st.info("Nie zakończyłeś jeszcze żadnego zadania dzisiaj.")
+        else:
+            for _, row in historia.iterrows():
+                st.markdown(f"""
+                <div class="dawid-card" style="opacity: 0.7;">
+                    <div class="dawid-header">
+                        <span class="dawid-time">{row['Godzina']}</span>
+                        <span class="badge badge-fin">Ukończono</span>
                     </div>
                     <div class="dawid-client">{row['Klient']}</div>
                     <div class="dawid-address">📍 {row['Lokalizacja']}</div>
-                    <div class="dawid-project">PROJ-{row['Nr Projektu']}</div>
                 </div>
-                """
-                st.markdown(html_card, unsafe_allow_html=True)
-                
-                # Interaktywny przycisk akcji na dole karty
-                if st.button(button_label, key=f"btn_{row['ID']}", type=button_kind, use_container_width=True):
-                    database.aktualizuj_status(row['ID'], nowy_status)
-                    st.rerun()
-                    
-                st.markdown("<br>", unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
