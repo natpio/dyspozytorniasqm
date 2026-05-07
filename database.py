@@ -37,38 +37,83 @@ def dodaj_zadanie(wiersz):
 def aktualizuj_status(id_zadania, nowy_status):
     """Aktualizuje status wybranego zadania (kolumna 11 to 'Status')."""
     arkusz = get_worksheet("Arkusz1")
-    komorka = arkusz.find(str(id_zadania))
-    if komorka:
-        arkusz.update_cell(komorka.row, 11, nowy_status)
+    try:
+        komorka = arkusz.find(str(id_zadania))
+        if komorka:
+            arkusz.update_cell(komorka.row, 11, nowy_status)
+    except Exception as e:
+        pass
 
 def usun_zadanie(id_zadania):
     """Usuwa całkowicie wiersz z zadaniem z bazy."""
     arkusz = get_worksheet("Arkusz1")
-    komorka = arkusz.find(str(id_zadania))
-    if komorka:
-        arkusz.delete_rows(komorka.row)
+    try:
+        komorka = arkusz.find(str(id_zadania))
+        if komorka:
+            arkusz.delete_rows(komorka.row)
+    except Exception as e:
+        pass
 
 def archiwizuj_zadanie(id_zadania):
     """Przenosi wiersz z głównego arkusza do zakładki 'Archiwum'."""
     arkusz = get_worksheet("Arkusz1")
     archiwum = get_worksheet("Archiwum")
-    komorka = arkusz.find(str(id_zadania))
-    if komorka:
-        # Kopiowanie danych wiersza
-        wiersz = arkusz.row_values(komorka.row)
-        # Wklejenie do archiwum
-        archiwum.append_row(wiersz)
-        # Usunięcie z głównego widoku
-        arkusz.delete_rows(komorka.row)
+    try:
+        komorka = arkusz.find(str(id_zadania))
+        if komorka:
+            # Kopiowanie danych wiersza
+            wiersz = arkusz.row_values(komorka.row)
+            # Wklejenie do archiwum
+            archiwum.append_row(wiersz)
+            # Usunięcie z głównego widoku
+            arkusz.delete_rows(komorka.row)
+    except Exception as e:
+        pass
 
 def edytuj_zadanie(id_zadania, nowy_wiersz):
     """Zastępuje dane wiersza nowymi wartościami na podstawie ID."""
     arkusz = get_worksheet("Arkusz1")
-    komorka = arkusz.find(str(id_zadania))
-    if komorka:
-        # Pobieramy zakres komórek dla danego wiersza (zakładamy kolumny od A do L)
-        lista_komorek = arkusz.range(f"A{komorka.row}:L{komorka.row}")
-        for i, wartosc in enumerate(nowy_wiersz):
-            lista_komorek[i].value = str(wartosc)
-        # Zbiorcza aktualizacja komórek (szybsze i bezpieczniejsze niż pojedynczo)
-        arkusz.update_cells(lista_komorek)
+    try:
+        komorka = arkusz.find(str(id_zadania))
+        if komorka:
+            # Pobieramy zakres komórek dla danego wiersza (zakładamy kolumny od A do L)
+            lista_komorek = arkusz.range(f"A{komorka.row}:L{komorka.row}")
+            for i, wartosc in enumerate(nowy_wiersz):
+                lista_komorek[i].value = str(wartosc)
+            # Zbiorcza aktualizacja komórek (szybsze i bezpieczniejsze niż pojedynczo)
+            arkusz.update_cells(lista_komorek)
+    except Exception as e:
+        pass
+
+# --- NOWE FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
+
+def pobierz_ustawienia_uzytkownika(uzytkownik):
+    """Pobiera opacity i blur dla konkretnego uzytkownika. Jesli brak, zwraca domyslne."""
+    try:
+        arkusz = get_worksheet("Ustawienia")
+        rekordy = arkusz.get_all_records()
+        for r in rekordy:
+            if str(r.get('Uzytkownik', '')) == str(uzytkownik):
+                return float(r.get('Opacity', 0.75)), int(r.get('Blur', 4))
+    except Exception:
+        # Zakładka Ustawienia jeszcze nie istnieje lub jest pusta
+        pass
+    
+    return 0.75, 4  # Wartosci domyslne, jesli brak danych
+
+def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
+    """Zapisuje lub aktualizuje ustawienia w arkuszu 'Ustawienia'."""
+    try:
+        arkusz = get_worksheet("Ustawienia")
+        try:
+            # Próbujemy znaleźć użytkownika w arkuszu
+            komorka = arkusz.find(str(uzytkownik))
+            if komorka:
+                # Aktualizacja - zakładamy, że Kolumna B to Opacity, a C to Blur
+                arkusz.update_cell(komorka.row, 2, float(opacity))
+                arkusz.update_cell(komorka.row, 3, int(blur))
+        except gspread.exceptions.CellNotFound:
+            # Użytkownika jeszcze nie ma - dodajemy nowy wiersz
+            arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
+    except Exception as e:
+        print(f"Błąd zapisu ustawień (upewnij się, że masz zakładkę 'Ustawienia'): {e}")
