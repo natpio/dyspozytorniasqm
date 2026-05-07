@@ -12,11 +12,8 @@ import base64
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard")
 
 # --- 2. OBSŁUGA CIASTECZEK (Logowanie na 30 dni) ---
-@st.cache_resource
-def get_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_manager()
+# Bezpośrednia inicjalizacja bez użycia problematycznego @st.cache_resource
+cookie_manager = stx.CookieManager(key="cookie_manager_sqm")
 
 # --- 3. INICJALIZACJA ZMIENNYCH SESYJNYCH ---
 if "zalogowany" not in st.session_state:
