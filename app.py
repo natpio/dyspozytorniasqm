@@ -14,7 +14,7 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v35_stable")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v36_live")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -31,23 +31,18 @@ zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
-    
-    # Pobieramy z Google Sheets
     op, bl = database.pobierz_ustawienia_uzytkownika(zalogowany_cookie)
-    
-    # Inicjujemy bezpieczne wartości w sesji
     st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op)))
     st.session_state["bg_blur"] = max(0, min(20, int(bl)))
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-# Domyślne awaryjne wartości
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# --- 5. APLIKACJA STYLÓW Z MODUŁU style.py ---
+# --- 5. APLIKACJA STYLÓW ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # --- 6. EKRAN LOGOWANIA ---
@@ -79,7 +74,6 @@ if st.session_state["zalogowany"] is None:
                 if pin == poprawne_haslo:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
-                    
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                     
                     op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
@@ -98,10 +92,7 @@ else:
         st.markdown(f'<div class="sidebar-subheader">Zalogowano: <b>{uzytkownik}</b></div>', unsafe_allow_html=True)
         
         if uzytkownik == "Łukasz":
-            wybor = st.radio("M", [
-                "⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", 
-                "🗓️ Kalendarz", "🏭 Logistyka", "🛠️ Konsola Admin.", "📂 Archiwum"
-            ], label_visibility="collapsed")
+            wybor = st.radio("M", ["⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", "🗓️ Kalendarz", "🏭 Logistyka", "🛠️ Konsola Admin.", "📂 Archiwum"], label_visibility="collapsed")
         elif uzytkownik == "Dawid":
             wybor = st.radio("M", ["📱 Moje Zlecenia"], label_visibility="collapsed")
         else:
@@ -111,17 +102,13 @@ else:
 
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
-                # Suwaki już nie mają on_change, aktualizują tylko sesję
-                nowe_krycie = st.slider("Krycie", 0.0, 1.0, value=st.session_state.bg_opacity, step=0.05, key="temp_opacity")
-                nowe_rozmycie = st.slider("Rozmycie", 0, 20, value=st.session_state.bg_blur, step=1, key="temp_blur")
+                # Przywrócono klucze "bg_opacity" i "bg_blur" - podgląd na żywo znów działa!
+                st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity")
+                st.slider("Rozmycie", 0, 20, step=1, key="bg_blur")
                 
-                # Zapisujemy do bazy TYLKO po kliknięciu przycisku (gwarancja dotarcia do Google Sheets)
                 if st.button("💾 Zapisz jako domyślne", use_container_width=True):
-                    st.session_state.bg_opacity = nowe_krycie
-                    st.session_state.bg_blur = nowe_rozmycie
-                    database.zapisz_ustawienia_uzytkownika(uzytkownik, nowe_krycie, nowe_rozmycie)
-                    st.toast("Ustawienia UI zapisane pomyślnie w bazie!", icon="✅")
-                    st.rerun()
+                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
+                    st.toast("Zapisano! Ustawienia będą pamiętane.", icon="✅")
 
         if st.button("Wyloguj się", use_container_width=True):
             try: cookie_manager.delete("zalogowany")
@@ -143,10 +130,7 @@ else:
         elif wybor == "🛠️ Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
         elif wybor == "📂 Archiwum": ui_lukasz.pokaz_archiwum()
     elif uzytkownik == "Dawid":
-        # Wymuszamy responsywny układ dla Dawida, aby uniknąć gigantycznych przycisków na PC
-        _, col_main, _ = st.columns([1, 2, 1])
-        with col_main:
-            ui_dawid.pokaz_panel()
+        ui_dawid.pokaz_panel() # Naprawione w samym pliku Dawida poniżej
     else:
         st_autorefresh(interval=30000, key="refresh_m")
         ui_magazyn.pokaz_tablice()
