@@ -8,55 +8,71 @@ import ui_magazyn
 import ui_mapa      
 import ui_kalendarz 
 import database
-import style  # <--- NASZ NOWY MODUŁ
+import style 
 
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard", page_icon="📦")
 
-# --- 2. OBSŁUGA CIASTECZEK (Pamięć 30 dni) ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_ultra_pro_v28")
+# --- 2. OBSŁUGA CIASTECZEK (Pamięć logowania) ---
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v32_final")
 
-# --- 3. INICJALIZACJA SESJI I ZABEZPIECZEŃ ---
+# --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 
 if "wybrane_konto" not in st.session_state:
     st.session_state["wybrane_konto"] = None
 
+# Flagi zabezpieczające przed nadpisywaniem ustawień i pętlami logowania
 if "blokada_autologowania" not in st.session_state:
     st.session_state["blokada_autologowania"] = False
 
 if "blokada_zapisu" not in st.session_state:
     st.session_state["blokada_zapisu"] = False
 
-# --- 4. LOGIKA LOGOWANIA Z CIASTECZKA ---
+if "ustawienia_wczytane" not in st.session_state:
+    st.session_state["ustawienia_wczytane"] = False
+
+# --- 4. LOGIKA ŁADOWANIA DANYCH I AUTOLOGOWANIA ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
-if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.session_state["blokada_autologowania"]:
+# Jeśli mamy ciasteczko, a ustawienia nie zostały jeszcze wczytane z bazy
+if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["blokada_zapisu"] = True
     st.session_state["zalogowany"] = zalogowany_cookie
     
+    # Pobranie preferencji UI z Google Sheets
     op, bl = database.pobierz_ustawienia_uzytkownika(zalogowany_cookie)
-    st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
-    st.session_state.bg_blur = max(0, min(20, int(bl)))
     
+    # Bezpieczniki (max 1.0 dla krycia) i wstrzyknięcie do sesji
+    st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op)))
+    st.session_state["bg_blur"] = max(0, min(20, int(bl)))
+    
+    st.session_state["ustawienia_wczytane"] = True
     st.session_state["blokada_zapisu"] = False
+    
+    # Wymuszenie odświeżenia, aby UI zobaczyło nowe wartości przed rysowaniem
+    st.rerun()
 
-# Domyślne wartości UI
+# Wartości domyślne (jeśli baza jest pusta)
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
 def zapisz_zmiany_ui():
-    """Zapisuje ustawienia do bazy"""
+    """Wysyła nowe ustawienia suwaków do Google Sheets"""
     if st.session_state["zalogowany"] and not st.session_state["blokada_zapisu"]:
-        database.zapisz_ustawienia_uzytkownika(st.session_state["zalogowany"], st.session_state.bg_opacity, st.session_state.bg_blur)
+        database.zapisz_ustawienia_uzytkownika(
+            st.session_state["zalogowany"], 
+            st.session_state.bg_opacity, 
+            st.session_state.bg_blur
+        )
 
-# --- 5. APLIKACJA STYLÓW Z ZEWNĘTRZNEGO MODUŁU ---
+# --- 5. APLIKACJA STYLÓW Z MODUŁU style.py ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# --- 6. EKRAN LOGOWANIA (Z 3 DUŻYMI PRZYCISKAMI) ---
+# --- 6. EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
     st.markdown('<div class="dashboard-header"><span style="font-size:2rem;">🔐</span><span class="dashboard-title" style="margin-left:10px;">SQM DISPATCH</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Wybierz konto, aby wejść do systemu:</div>', unsafe_allow_html=True)
@@ -79,7 +95,7 @@ if st.session_state["zalogowany"] is None:
                 try:
                     poprawne_haslo = str(st.secrets["passwords"][key])
                 except KeyError:
-                    st.error("Błąd konfiguracji haseł. Sprawdź plik secrets.")
+                    st.error("Błąd konfiguracji haseł w secrets.")
                     st.stop()
                     
                 if pin == poprawne_haslo:
@@ -87,12 +103,15 @@ if st.session_state["zalogowany"] is None:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
                     
+                    # Zapis ciasteczka 30 dni
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                     
+                    # Wczytanie profilu użytkownika
                     op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
                     st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
                     st.session_state.bg_blur = max(0, min(20, int(bl)))
                     
+                    st.session_state["ustawienia_wczytane"] = True
                     st.session_state["blokada_zapisu"] = False
                     st.rerun()
                 else:
@@ -105,6 +124,7 @@ else:
         st.markdown('<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sidebar-subheader">Zalogowano: <b>{uzytkownik}</b></div>', unsafe_allow_html=True)
         
+        # Nawigacja zależna od poziomu dostępu
         if uzytkownik == "Łukasz":
             wybor = st.radio("M", [
                 "⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", 
@@ -117,6 +137,7 @@ else:
 
         st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
 
+        # Ustawienia suwaków tła tylko dla Admina (Łukasza)
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity", on_change=zapisz_zmiany_ui)
@@ -130,10 +151,11 @@ else:
                 pass
             st.session_state["zalogowany"] = None
             st.session_state["wybrane_konto"] = None
+            st.session_state["ustawienia_wczytane"] = False
             st.session_state["blokada_autologowania"] = True
             st.rerun()
 
-    # --- 8. PEŁNY ROUTING ---
+    # --- 8. ROUTING DO MODUŁÓW UI ---
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=60000, key="refresh_l")
         if wybor == "⚙️ Dashboard": ui_lukasz.pokaz_dashboard()
