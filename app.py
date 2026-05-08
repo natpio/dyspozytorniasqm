@@ -17,7 +17,7 @@ import config
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK (Persystencja sesji) ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v71_perfect_sidebar")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v75_perfect_sidebar")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -145,23 +145,22 @@ header {visibility: hidden;}
 }
 
 /* --- NAPRAWA MENU NAWIGACYJNEGO --- */
-/* Ukrycie domyślnych kółek radia Streamlit */
 .stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { display: none !important; }
 
-/* Kontener całej listy menu */
 .stRadio div[role="radiogroup"] {
-    display: flex; flex-direction: column; gap: 8px; width: 100%;
+    display: flex; flex-direction: column; gap: 6px; width: 100%;
 }
 
-/* Usuwamy marginesy z etykiet, by zajęły całą szerokość */
 .stRadio div[role="radiogroup"] label {
     width: 100% !important; margin: 0 !important; cursor: pointer !important;
 }
 
-/* Perfekcyjnie RÓWNE i JEDNAKOWE przyciski nawigacyjne */
+/* Właściwe przyciski z Wymuszeniem wyrównania do lewej */
 .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child {
     width: 100% !important;
-    display: block !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important; /* Równo do lewej */
     padding: 12px 18px !important;
     background: rgba(255, 255, 255, 0.03) !important;
     border-radius: 12px !important;
@@ -173,12 +172,18 @@ header {visibility: hidden;}
     box-sizing: border-box !important;
 }
 
-/* Efekt Hover na przyciskach menu */
+/* Wymuszenie na tekście p Streamlit wyrównania do lewej bez marginesów */
+.stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child p {
+    text-align: left !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 .stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
     background: rgba(255, 255, 255, 0.08) !important; color: #f8fafc !important;
 }
 
-/* ZAZNACZONY PRZYCISK (Aktywna zakładka) */
 .stRadio div[role="radiogroup"] label:has(input:checked) div[data-baseweb="radio"] > div:last-child {
     background: rgba(56, 189, 248, 0.1) !important;
     border: 1px solid rgba(56, 189, 248, 0.4) !important;
@@ -187,15 +192,18 @@ header {visibility: hidden;}
     font-weight: 700 !important;
 }
 
-/* NAGŁÓWKI SEKCJI MENU (Generowane z zewnątrz, nie psują przycisków!) */
+/* NAGŁÓWKI SEKCJI MENU - ABSOLUTNE POZYCJONOWANIE NAD KONTENEREM (NIE PSUJĄ LAYOUTU) */
+.stRadio div[role="radiogroup"] label:nth-child(1) { margin-top: 30px !important; position: relative; }
 .stRadio div[role="radiogroup"] label:nth-child(1)::before {
-    content: 'OPERACJE GŁÓWNE'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 5px; letter-spacing: 1px;
+    content: 'OPERACJE GŁÓWNE'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
 }
+.stRadio div[role="radiogroup"] label:nth-child(3) { margin-top: 35px !important; position: relative; }
 .stRadio div[role="radiogroup"] label:nth-child(3)::before {
-    content: 'DANE I LOGISTYKA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 25px; letter-spacing: 1px;
+    content: 'DANE I LOGISTYKA'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
 }
+.stRadio div[role="radiogroup"] label:nth-child(7) { margin-top: 35px !important; position: relative; }
 .stRadio div[role="radiogroup"] label:nth-child(7)::before {
-    content: 'ZARZĄDZANIE I USTAWIENIA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 25px; letter-spacing: 1px;
+    content: 'ZARZĄDZANIE I USTAWIENIA'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
 }
 
 /* Expander Personalizacji UI */
