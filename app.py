@@ -14,7 +14,7 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v39_iron")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v40_iron")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -28,7 +28,7 @@ if "ustawienia_wczytane" not in st.session_state:
 
 # --- 4. ZAAWANSOWANA FUNKCJA WCZYTYWANIA (ODPORNA NA F5 I CACHE) ---
 def wczytaj_ustawienia(uzytkownik):
-    # 1. Próba z Ciasteczka (Omija całkowicie opóźnienia Google Sheets i F5)
+    # 1. Próba z Ciasteczka
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
     
@@ -36,7 +36,7 @@ def wczytaj_ustawienia(uzytkownik):
         try:
             st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
             st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
-            return # Jeśli mamy ciasteczko, kończymy - to najświeższe dane!
+            return 
         except: pass
         
     # 2. Próba z bazy danych Google Sheets (Fallback)
@@ -108,7 +108,8 @@ if st.session_state["zalogowany"] is None:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
                     
-                    cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                    # Dodano klucz "set_logowanie" by uniknąć kolizji
+                    cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key="set_logowanie")
                     
                     wczytaj_ustawienia(st.session_state["zalogowany"])
                     st.session_state["ustawienia_wczytane"] = True
@@ -145,10 +146,10 @@ else:
                     try: database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
                     except: pass
                     
-                    # 2. Zapisujemy TWARDO do ciasteczka! (Dzięki temu F5 nas nie pokona)
+                    # 2. Zapisujemy TWARDO do ciasteczka z DODANIEM UNIKALNYCH KLUCZY (Fix na DuplicateElementKey)
                     waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
-                    cookie_manager.set(f"ui_op_{uzytkownik}", st.session_state.bg_opacity, expires_at=waznosc)
-                    cookie_manager.set(f"ui_bl_{uzytkownik}", st.session_state.bg_blur, expires_at=waznosc)
+                    cookie_manager.set(f"ui_op_{uzytkownik}", st.session_state.bg_opacity, expires_at=waznosc, key="set_op_cookie")
+                    cookie_manager.set(f"ui_bl_{uzytkownik}", st.session_state.bg_blur, expires_at=waznosc, key="set_bl_cookie")
                     
                     # 3. Zmuszamy chmurę do wyczyszczenia pamięci
                     try: st.cache_data.clear()
@@ -159,7 +160,8 @@ else:
                     st.toast("Zapisano! Ustawienia zabezpieczone lokalnie i w chmurze.", icon="✅")
 
         if st.button("Wyloguj się", use_container_width=True):
-            try: cookie_manager.delete("zalogowany")
+            # Dodano unikalny klucz "del_logowanie"
+            try: cookie_manager.delete("zalogowany", key="del_logowanie")
             except Exception: pass
             st.session_state["zalogowany"] = None
             st.session_state["wybrane_konto"] = None
