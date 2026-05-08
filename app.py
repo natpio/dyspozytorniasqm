@@ -16,8 +16,8 @@ import config
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
-# --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v70_premium_sidebar")
+# --- 2. OBSŁUGA CIASTECZEK (Persystencja sesji) ---
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v71_perfect_sidebar")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -31,6 +31,7 @@ if "blokada_autologowania" not in st.session_state:
 if "ustawienia_wczytane" not in st.session_state:
     st.session_state["ustawienia_wczytane"] = False
 
+# --- FUNKCJA POMOCNICZA: POBRANIE ROLI ---
 def pobierz_role_z_bazy(login):
     uzytkownicy = database.pobierz_uzytkownikow()
     for u in uzytkownicy:
@@ -38,6 +39,7 @@ def pobierz_role_z_bazy(login):
             return str(u.get("Rola", ""))
     return "Admin"
 
+# --- 4. FUNKCJA WCZYTYWANIA USTAWIEŃ UI ---
 def wczytaj_ustawienia(uzytkownik):
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
@@ -53,12 +55,14 @@ def wczytaj_ustawienia(uzytkownik):
         op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
         op_str = str(op).replace(',', '.').strip()
         bl_str = str(bl).replace(',', '.').strip()
+        
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str if op_str != 'None' else 0.75)))
         st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str if bl_str != 'None' else 4))))
     except:
         st.session_state["bg_opacity"] = 0.75
         st.session_state["bg_blur"] = 4
 
+# --- 5. LOGIKA AUTOLOGOWANIA ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
@@ -73,14 +77,16 @@ if "bg_opacity" not in st.session_state:
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
+# --- 6. APLIKACJA STYLÓW TŁA ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
+
 # ==========================================================
-# GŁÓWNY STYL CSS (KARTA LOGOWANIA + NOWY PASEK BOCZNY)
+# POTĘŻNY CSS - STYLIZACJA LOGOWANIA I PASKA BOCZNEGO
 # ==========================================================
 st.markdown("""
 <style>
-/* --- STYLIZACJA KARTY LOGOWANIA --- */
+/* --- KARTA LOGOWANIA --- */
 div[data-testid="column"]:has(.login-marker) {
     background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98)) !important;
     backdrop-filter: blur(20px) !important;
@@ -105,77 +111,106 @@ div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > butto
 }
 header {visibility: hidden;}
 
-/* --- STYLIZACJA PASKA BOCZNEGO (PREMIUM UI) --- */
+/* --- PASEK BOCZNY PREMIUM --- */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
     border-right: 1px solid rgba(255,255,255,0.05) !important;
 }
 
-/* Sekcja Profilu */
+/* Profil Użytkownika */
 .sidebar-logo {
-    font-size: 2rem; font-weight: 900;
-    background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+    font-size: 1.8rem; font-weight: 900;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     margin-bottom: 25px; text-align: left; letter-spacing: -1px;
 }
 .sidebar-profile {
     display: flex; align-items: center; gap: 15px;
-    padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px;
+    padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px;
 }
 .avatar {
-    width: 50px; height: 50px; border-radius: 50%;
-    background: linear-gradient(135deg, #7dd3fc, #3b82f6);
+    width: 45px; height: 45px; border-radius: 50%;
+    background: linear-gradient(135deg, #38bdf8, #3b82f6);
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px; font-weight: 900; color: #fff;
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    font-size: 20px; font-weight: 900; color: #fff;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    flex-shrink: 0;
 }
-.profile-info { display: flex; flex-direction: column; gap: 4px; }
-.greeting { color: #e2e8f0; font-size: 1.05rem; }
+.profile-info { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+.greeting { color: #f8fafc; font-size: 1.05rem; }
 .role-badge {
     background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.3);
     color: #2dd4bf; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;
-    padding: 3px 8px; border-radius: 12px; box-shadow: 0 0 10px rgba(45, 212, 191, 0.2); width: fit-content;
+    padding: 2px 8px; border-radius: 12px; width: fit-content; text-transform: uppercase;
 }
 
+/* --- NAPRAWA MENU NAWIGACYJNEGO --- */
 /* Ukrycie domyślnych kółek radia Streamlit */
-.stRadio div[role="radiogroup"] label div[data-baseweb="radio"] div:first-child { display: none !important; }
+.stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { display: none !important; }
 
-/* Stylizacja standardowej zakładki menu */
+/* Kontener całej listy menu */
+.stRadio div[role="radiogroup"] {
+    display: flex; flex-direction: column; gap: 8px; width: 100%;
+}
+
+/* Usuwamy marginesy z etykiet, by zajęły całą szerokość */
 .stRadio div[role="radiogroup"] label {
-    padding: 12px 15px !important; border-radius: 12px !important; color: #94a3b8 !important; font-size: 1.05rem !important; transition: all 0.2s ease !important; border: 1px solid transparent !important; margin-bottom: 4px !important; cursor: pointer !important;
-}
-.stRadio div[role="radiogroup"] label:hover {
-    color: #f8fafc !important; background: rgba(255,255,255,0.05) !important;
+    width: 100% !important; margin: 0 !important; cursor: pointer !important;
 }
 
-/* AKTYWNA ZAKŁADKA (Neon Glow) */
-.stRadio div[role="radiogroup"] label:has(input:checked) {
-    background: rgba(56, 189, 248, 0.08) !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; color: #f8fafc !important; box-shadow: 0 0 15px rgba(56, 189, 248, 0.1) inset, 0 0 10px rgba(56, 189, 248, 0.2) !important;
+/* Perfekcyjnie RÓWNE i JEDNAKOWE przyciski nawigacyjne */
+.stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child {
+    width: 100% !important;
+    display: block !important;
+    padding: 12px 18px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 12px !important;
+    color: #94a3b8 !important;
+    font-size: 1.05rem !important;
+    font-weight: 500 !important;
+    border: 1px solid transparent !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
 }
 
-/* NAGŁÓWKI KATEGORII W MENU (Generowane automatycznie przed odpowiednimi zakładkami) */
+/* Efekt Hover na przyciskach menu */
+.stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
+    background: rgba(255, 255, 255, 0.08) !important; color: #f8fafc !important;
+}
+
+/* ZAZNACZONY PRZYCISK (Aktywna zakładka) */
+.stRadio div[role="radiogroup"] label:has(input:checked) div[data-baseweb="radio"] > div:last-child {
+    background: rgba(56, 189, 248, 0.1) !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.1) inset !important;
+    font-weight: 700 !important;
+}
+
+/* NAGŁÓWKI SEKCJI MENU (Generowane z zewnątrz, nie psują przycisków!) */
 .stRadio div[role="radiogroup"] label:nth-child(1)::before {
-    content: 'OPERACJE GŁÓWNE'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 12px; margin-top: 5px; letter-spacing: 1px;
+    content: 'OPERACJE GŁÓWNE'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 5px; letter-spacing: 1px;
 }
 .stRadio div[role="radiogroup"] label:nth-child(3)::before {
-    content: 'DANE I LOGISTYKA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 12px; margin-top: 20px; letter-spacing: 1px;
+    content: 'DANE I LOGISTYKA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 25px; letter-spacing: 1px;
 }
 .stRadio div[role="radiogroup"] label:nth-child(7)::before {
-    content: 'ZARZĄDZANIE I USTAWIENIA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 12px; margin-top: 20px; letter-spacing: 1px;
+    content: 'ZARZĄDZANIE I USTAWIENIA'; display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; margin-top: 25px; letter-spacing: 1px;
 }
 
-/* Expander Personalizacji UI (aby wyglądał jak część menu) */
-[data-testid="stSidebar"] [data-testid="stExpander"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; }
-[data-testid="stSidebar"] [data-testid="stExpander"] summary { padding: 10px 15px !important; color: #94a3b8 !important; font-size: 1.05rem !important; font-weight: normal !important; }
-[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover { color: #f8fafc !important; background: rgba(255,255,255,0.05) !important; border-radius: 12px !important; }
+/* Expander Personalizacji UI */
+[data-testid="stSidebar"] [data-testid="stExpander"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; margin-top: 15px !important;}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary { padding: 12px 18px !important; color: #94a3b8 !important; font-size: 1.05rem !important; background: rgba(255,255,255,0.03) !important; border-radius: 12px !important; transition: all 0.2s ease;}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover { color: #f8fafc !important; background: rgba(255,255,255,0.08) !important; }
 
 /* Przycisk Wyloguj */
 .logout-wrapper button {
-    background: linear-gradient(90deg, #ef4444, #dc2626) !important; color: white !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; padding: 12px !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important; margin-top: 40px !important; transition: 0.3s;
+    background: linear-gradient(90deg, #ef4444, #dc2626) !important; color: white !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; padding: 12px !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important; margin-top: 30px !important; transition: 0.3s;
 }
 .logout-wrapper button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- 7. EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
@@ -227,6 +262,7 @@ if st.session_state["zalogowany"] is None:
                     else:
                         st.error("Błędny kod PIN!")
 
+
 # --- 8. PANEL GŁÓWNY (PO LOGOWANIU) ---
 else:
     uzytkownik = st.session_state["zalogowany"]
@@ -258,7 +294,7 @@ else:
         else: # Magazyn
             wybor = st.radio("Nawigacja", ["🏭 Tablica Magazynowa"], label_visibility="collapsed")
 
-        # Expander opcji wizualnych jako integralna część menu (Tylko dla Admina)
+        # Expander opcji wizualnych
         if rola == "Admin":
             with st.expander("🎨 Personalizacja UI"):
                 st.slider("Przezroczystość", 0.0, 1.0, step=0.05, key="bg_opacity")
