@@ -7,8 +7,30 @@ import streamlit.components.v1 as components
 
 def pokaz_kalendarz():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🗓️</span><span class="dashboard-title">Harmonogram Pracy</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Interaktywny podgląd wszystkich zleceń. Kliknij w zadanie, aby zobaczyć szczegóły.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Interaktywny podgląd zleceń. Przeciągnij zadanie, aby zmienić datę, lub kliknij, aby zobaczyć szczegóły.</div>', unsafe_allow_html=True)
     
+    # --- LOGIKA ZAPISU PO PRZECIĄGNIĘCIU (Drag & Drop) ---
+    params = st.query_params
+    if "drop_id" in params and "drop_date" in params:
+        target_id = params.get("drop_id")
+        new_date = params.get("drop_date")
+        
+        dane_all = database.pobierz_wszystkie_dane()
+        wiersz = next((r for r in dane_all if str(r.get('ID')) == target_id), None)
+        
+        if wiersz:
+            zaktualizowany = [
+                wiersz['ID'], new_date, wiersz['Godzina'], wiersz['Dział'], 
+                wiersz['Typ Akcji'], wiersz['Nr Projektu'], wiersz['Klient'], 
+                wiersz['Lokalizacja'], wiersz['Kontakt'], wiersz['Auto'], 
+                wiersz['Status'], wiersz['Wykonawca']
+            ]
+            database.edytuj_zadanie(target_id, zaktualizowany)
+            st.toast(f"✅ Zmieniono datę dla: {wiersz['Klient']} na {new_date}", icon="📅")
+            
+        st.query_params.clear()
+        st.rerun()
+
     dane = database.pobierz_wszystkie_dane()
     events = []
     
@@ -37,6 +59,7 @@ def pokaz_kalendarz():
 
                 # Zapisujemy pełne dane w extendedProps dla wyskakującego okienka
                 events.append({
+                    "id": str(row.get('ID')), # KLUCZOWE: Dodane ID dla Drag & Drop
                     "title": f"{data_obj.strftime('%H:%M')} | {row.get('Wykonawca', 'Brak')} - {row.get('Klient', 'Brak')}",
                     "start": start_iso,
                     "color": kolor,
@@ -56,6 +79,7 @@ def pokaz_kalendarz():
     # Bezpiecznik: ukryte wydarzenie wymuszające rysowanie siatki
     if not events:
         events.append({
+            "id": "dummy",
             "title": "Brak zadań",
             "start": datetime.now().strftime('%Y-%m-%dT12:00:00'),
             "color": "transparent",
@@ -64,7 +88,7 @@ def pokaz_kalendarz():
 
     events_json = json.dumps(events)
 
-    # PEŁNY KOD HTML + PREMIUM CSS (Glassmorphism) + MODAL JS
+    # PEŁNY KOD HTML + PREMIUM CSS (Glassmorphism) + MODAL JS + DRAG & DROP
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -130,9 +154,10 @@ def pokaz_kalendarz():
                 font-weight: 700 !important; 
                 font-size: 0.8rem !important; 
                 box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; 
-                cursor: pointer; 
+                cursor: grab; /* Dodano grab dla sugerowania Drag&Drop */
                 transition: transform 0.15s ease; 
             }}
+            .fc-event:active {{ cursor: grabbing; }}
             .fc-event:hover {{ transform: scale(1.02); filter: brightness(1.1); }}
             
             /* Złagodzenie siatki dni */
@@ -225,6 +250,7 @@ def pokaz_kalendarz():
                     height: 750,
                     contentHeight: 'auto',
                     firstDay: 1, /* Tydzień zaczyna się od poniedziałku */
+                    editable: true, /* ZEZWOLENIE NA DRAG & DROP */
                     headerToolbar: {{
                         left: 'prev,next today',
                         center: 'title',
@@ -232,8 +258,21 @@ def pokaz_kalendarz():
                     }},
                     events: {events_json},
                     
+                    // WYWOŁANIE PO PRZESUNIĘCIU ZADANIA (Drag&Drop)
+                    eventDrop: function(info) {{
+                        let eventId = info.event.id;
+                        let newDate = info.event.startStr.split('T')[0];
+                        
+                        // Przesyłamy ID i nową datę do aplikacji Streamlit
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('drop_id', eventId);
+                        url.searchParams.set('drop_date', newDate);
+                        window.parent.location.href = url.href;
+                    }},
+
                     // WYWOŁANIE OKIENKA PO KLIKNIĘCIU W WYDARZENIE
                     eventClick: function(info) {{
+                        if (!info.event.id || info.event.id === "dummy") return; // Zabezpieczenie dla "Brak Zadań"
                         var props = info.event.extendedProps;
                         
                         // Podmiana tekstów w oknie modalnym
