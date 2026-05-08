@@ -16,7 +16,7 @@ def zastosuj_style(opacity, blur):
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
-    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH */
+    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
     [data-testid="stHeader"] { display: none !important; }
     footer { display: none !important; }
     #MainMenu { visibility: hidden !important; }
@@ -45,21 +45,31 @@ def zastosuj_style(opacity, blur):
         background-image: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
         border-right: 1px solid rgba(255,255,255,0.05) !important;
     }
+    
+    /* Blokada przezroczystości wewnętrznego kontenera Streamlit */
     [data-testid="stSidebar"] > div:first-child {
         background-color: transparent !important;
         background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) !important;
         background-size: 16px 16px !important;
     }
-    [data-testid="stSidebar"] * { color: #f8fafc !important; }
+    
+    /* Wymuszenie białego koloru WSZYSTKICH tekstów w pasku bocznym */
+    [data-testid="stSidebar"] * { 
+        color: #f8fafc !important; 
+    }
 
     .sidebar-header { 
         background: -webkit-linear-gradient(45deg, #60a5fa, #f8fafc);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         font-size: 1.6rem !important; font-weight: 900 !important; padding: 1.5rem 1rem 0.5rem 1rem !important;
     }
-    .sidebar-subheader { font-size: 0.85rem !important; color: #94a3b8 !important; padding: 0 1rem 1.2rem 1rem !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+    
+    .sidebar-subheader { 
+        font-size: 0.85rem !important; color: #94a3b8 !important; 
+        padding: 0 1rem 1.2rem 1rem !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; 
+    }
 
-    /* 🔥 INTERAKTYWNE MENU RADIOWE 🔥 */
+    /* 🔥 INTERAKTYWNE MENU RADIOWE (USUNIĘCIE KROPEK STREAMLIT) 🔥 */
     [data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
 
     div[role="radiogroup"] > label {
@@ -76,29 +86,36 @@ def zastosuj_style(opacity, blur):
         background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)) !important;
         border-left: 4px solid #3b82f6 !important; transform: translateX(8px) !important;
     }
-    div[role="radiogroup"] > label p { font-size: 1rem !important; font-weight: 500 !important; margin-left: 5px !important; }
+    div[role="radiogroup"] > label p { 
+        font-size: 1rem !important; font-weight: 500 !important; margin-left: 5px !important; 
+    }
 
     /* SUWAKI USTAWIEŃ UI W PASKU */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         background-color: rgba(15, 23, 42, 0.5) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 12px !important; margin: 1rem !important;
+        border-radius: 12px !important;
+        margin: 1rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary { background-color: transparent !important; }
 
-    /* PRZYCISK WYLOGOWANIA */
-    div[data-testid="stSidebar"] .stButton > button {
+    /* 🔥 PRZYCISK WYLOGOWANIA (Naprawa białego tekstu) 🔥 */
+    div[data-testid="stSidebar"] .stButton > button,
+    div[data-testid="stSidebar"] .stButton > button * {
         background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
         color: white !important; font-weight: 800 !important; border-radius: 12px !important; border: none !important;
-        width: 100% !important; padding: 12px !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
-        margin-top: 1.5rem;
+        width: 100% !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
     }
-    div[data-testid="stSidebar"] .stButton > button:hover {
+    div[data-testid="stSidebar"] .stButton > button {
+        padding: 12px !important; margin-top: 1.5rem;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover,
+    div[data-testid="stSidebar"] .stButton > button:hover * {
         background: linear-gradient(135deg, #f87171 0%, #dc2626 100%) !important;
     }
 
     /* ========================================= */
-    /* KARTY DASHBOARDU I CIEMNY MOTYW           */
+    /* KARTY DASHBOARDU                          */
     /* ========================================= */
     .card-container { 
         background: white !important; border-radius: 15px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.05) !important; 
@@ -106,6 +123,7 @@ def zastosuj_style(opacity, blur):
     }
     .card-value { font-size: 2.4rem !important; font-weight: bold !important; color: #0f172a !important; }
 
+    /* 🌙 DARK MODE (Ciemny motyw przeglądarki) */
     @media (prefers-color-scheme: dark) {
         .stApp::before { background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; }
         .card-container {
