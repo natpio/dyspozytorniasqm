@@ -2,6 +2,7 @@ import streamlit as st
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
 import datetime
+import time
 import ui_lukasz
 import ui_dawid
 import ui_magazyn
@@ -14,7 +15,7 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v40_iron")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v45_iron")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -26,9 +27,9 @@ if "blokada_autologowania" not in st.session_state:
 if "ustawienia_wczytane" not in st.session_state:
     st.session_state["ustawienia_wczytane"] = False
 
-# --- 4. ZAAWANSOWANA FUNKCJA WCZYTYWANIA (ODPORNA NA F5 I CACHE) ---
+# --- 4. ZAAWANSOWANA FUNKCJA WCZYTYWANIA (ODPORNA NA F5 I POLSKIE ZNAKI) ---
 def wczytaj_ustawienia(uzytkownik):
-    # 1. Próba z Ciasteczka
+    # KROK 1: Próba z lokalnego ciasteczka (Najszybsza i najbardziej wiarygodna metoda)
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
     
@@ -36,10 +37,10 @@ def wczytaj_ustawienia(uzytkownik):
         try:
             st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
             st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
-            return 
+            return # Udało się! Omijamy Google Sheets.
         except: pass
         
-    # 2. Próba z bazy danych Google Sheets (Fallback)
+    # KROK 2: Próba z bazy danych Google Sheets (Gdy logujemy się z nowego urządzenia)
     try:
         wynik = database.pobierz_ustawienia_uzytkownika(uzytkownik)
         if isinstance(wynik, tuple) and len(wynik) >= 2:
@@ -47,6 +48,7 @@ def wczytaj_ustawienia(uzytkownik):
         else:
             op, bl = 0.75, 4
             
+        # Zamiana polskiego przecinka na amerykańską kropkę
         op_str = str(op).replace(',', '.').strip()
         bl_str = str(bl).replace(',', '.').strip()
         
@@ -56,7 +58,7 @@ def wczytaj_ustawienia(uzytkownik):
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str)))
         st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str))))
     except Exception:
-        # 3. Twardy Reset Bezpieczeństwa
+        # KROK 3: Twardy Reset (W razie totalnej awarii)
         st.session_state["bg_opacity"] = 0.75
         st.session_state["bg_blur"] = 4
 
@@ -69,13 +71,14 @@ if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-# Domyślne wartości
+# Domyślne wartości ubezpieczające (przed wejściem logiki ciasteczek)
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
 # --- 6. APLIKACJA STYLÓW Z MODUŁU style.py ---
+# Styl jest wstrzykiwany co klatkę, więc suwaki reagują NATYCHMIAST
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # --- 7. EKRAN LOGOWANIA ---
@@ -108,8 +111,9 @@ if st.session_state["zalogowany"] is None:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
                     
-                    # Dodano klucz "set_logowanie" by uniknąć kolizji
-                    cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key="set_logowanie")
+                    # Generowanie unikalnego klucza dla ciasteczka logowania
+                    ts_log = str(int(time.time() * 1000))
+                    cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts_log}")
                     
                     wczytaj_ustawienia(st.session_state["zalogowany"])
                     st.session_state["ustawienia_wczytane"] = True
@@ -138,30 +142,31 @@ else:
 
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
+                # Suwaki dynamicznie manipulują session_state, co wymusza płynną aktualizację CSS
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity")
                 st.slider("Rozmycie", 0, 20, step=1, key="bg_blur")
                 
                 if st.button("💾 Zapisz jako domyślne", use_container_width=True):
-                    # 1. Wysyłamy do Google Sheets (Dla innych urządzeń)
+                    # 1. Twardy zapis do Google Sheets
                     try: database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
                     except: pass
                     
-                    # 2. Zapisujemy TWARDO do ciasteczka z DODANIEM UNIKALNYCH KLUCZY (Fix na DuplicateElementKey)
+                    # 2. Zapis do ciasteczek z użyciem ZNACZNIKA CZASU (Rozwiązuje StreamlitDuplicateElementKey!)
+                    ts_op = str(int(time.time() * 1000)) + "_op"
+                    ts_bl = str(int(time.time() * 1000)) + "_bl"
                     waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
-                    cookie_manager.set(f"ui_op_{uzytkownik}", st.session_state.bg_opacity, expires_at=waznosc, key="set_op_cookie")
-                    cookie_manager.set(f"ui_bl_{uzytkownik}", st.session_state.bg_blur, expires_at=waznosc, key="set_bl_cookie")
                     
-                    # 3. Zmuszamy chmurę do wyczyszczenia pamięci
-                    try: st.cache_data.clear()
-                    except: pass
-                    try: st.cache_resource.clear()
-                    except: pass
+                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=waznosc, key=f"set_{ts_op}")
+                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=waznosc, key=f"set_{ts_bl}")
                     
-                    st.toast("Zapisano! Ustawienia zabezpieczone lokalnie i w chmurze.", icon="✅")
+                    # 3. Brutalne wyczyszczenie pamięci podręcznej
+                    st.cache_data.clear()
+                    
+                    st.toast("Zapisano! Ustawienia zabezpieczone przed resetem F5.", icon="✅")
 
         if st.button("Wyloguj się", use_container_width=True):
-            # Dodano unikalny klucz "del_logowanie"
-            try: cookie_manager.delete("zalogowany", key="del_logowanie")
+            ts_del = str(int(time.time() * 1000))
+            try: cookie_manager.delete("zalogowany", key=f"del_log_{ts_del}")
             except Exception: pass
             st.session_state["zalogowany"] = None
             st.session_state["wybrane_konto"] = None
