@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import database
 
-# Lista 8 zdefiniowanych typów akcji (Rental i Realizacja)
+# Lista zdefiniowanych typów akcji
 TYPY_AKCJI = [
     "Dowóz - Rental",
     "Odbiór - Rental",
@@ -103,41 +103,74 @@ def pokaz_dashboard():
     else:
         st.info("Brak zleceń na dzisiaj. Baza jest pusta.")
 
+# ==========================================
+# ROZDZIELONY FORMULARZ (Wyjazdy i Awizacje)
+# ==========================================
 @st.fragment
 def pokaz_formularz():
-    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">➕</span><span class="dashboard-title">Nowy Wpis</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Wprowadź dane dla Logistyki. Dzięki technologii <i>Fragments</i> dodanie odbywa się cicho w tle.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">➕</span><span class="dashboard-title">Rejestracja Zadań</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Wybierz odpowiednią zakładkę dla operacji magazynowej lub wyjazdu terenowego.</div>', unsafe_allow_html=True)
     
-    with st.form("nowe_zadanie_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**1. Kiedy i Co?**")
-            data = st.date_input("Data realizacji")
-            godzina = st.time_input("Godzina")
-            dzial = st.selectbox("Dział (Księgowość/Raport)", ["Rental", "Realizacja"])
-            typ_akcji = st.selectbox("Typ Akcji (8 opcji)", TYPY_AKCJI)
-            auto = st.selectbox("Auto", ["Brak", "Bus 1 (Renault)", "Bus 2 (Peugeot)", "Ciężarówka (MAN)"])
-            
-        with col2:
-            st.markdown("**2. Kto i Gdzie?**")
-            nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
-            klient = st.text_input("Klient (Firma)")
-            lokalizacja = st.text_input("Lokalizacja (adres - puste dla magazynu)")
-            kontakt = st.text_input("Telefon Kontaktowy")
-            kto_odbiera = st.text_input("Kto odbiera (Imię i Nazwisko / Magazynier)")
+    # Podział na dwie zakładki
+    tab_wyjazd, tab_awizacja = st.tabs(["🚚 Zlecenie Wyjazdu (Dla Kierowcy)", "🏭 Awizacja Magazynowa (Klient u nas)"])
 
-        st.markdown("<hr style='border-color: rgba(255,255,255,0.05); margin: 10px 0;'>", unsafe_allow_html=True)
-        if st.form_submit_button("Zapisz Zlecenie w Bazie", type="primary"):
-            id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
-            pelny_kontakt = f"{kontakt} | Odbiór: {kto_odbiera}" if kto_odbiera else kontakt
-            wykonawca = "Łukasz (Magazyn)" if "Magazyn" in typ_akcji else "Dawid"
-            status = "Awizacja" if "Magazyn" in typ_akcji else "Nowe"
+    # --- ZAKŁADKA 1: WYJAZDY ---
+    with tab_wyjazd:
+        with st.form("form_wyjazd", clear_on_submit=True):
+            st.info("💡 Formularz wygeneruje zadanie na panelu mobilnym kierowcy (Dawida).")
+            col1, col2 = st.columns(2)
+            with col1:
+                data = st.date_input("Data wyjazdu")
+                godzina = st.time_input("Godzina na miejscu")
+                dzial = st.selectbox("Dział", ["Rental", "Realizacja"])
+                typ_akcji = st.selectbox("Typ zadania", ["Dowóz do klienta", "Odbiór od klienta"])
+                auto = st.selectbox("Auto", ["Bus 1 (Renault)", "Bus 2 (Peugeot)", "Ciężarówka (MAN)"])
+            with col2:
+                nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
+                klient = st.text_input("Klient (Firma) *", placeholder="Wymagane")
+                lokalizacja = st.text_input("Lokalizacja (Adres) *", placeholder="Dokładny adres")
+                kontakt = st.text_input("Osoba kontaktowa na miejscu i Telefon")
 
-            nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, typ_akcji, nr_projektu, klient, lokalizacja, pelny_kontakt, auto, status, wykonawca]
-            database.dodaj_zadanie(nowy_wiersz)
-            
-            # Formularz wyczyści się sam (clear_on_submit=True), a my pokażemy tylko powiadomienie
-            st.toast(f"✅ Zlecenie dodane! Przypisano do: {wykonawca}", icon="🚀")
+            st.markdown("<hr style='border-color: rgba(255,255,255,0.05); margin: 10px 0;'>", unsafe_allow_html=True)
+            if st.form_submit_button("Wyślij Zlecenie Wyjazdu", type="primary"):
+                if klient and lokalizacja:
+                    id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
+                    akcja_format = f"{'Dowóz' if 'Dowóz' in typ_akcji else 'Odbiór'} - {dzial}"
+                    # Sztywno przypisujemy Dawida i status Nowe
+                    nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, akcja_format, nr_projektu, klient, lokalizacja, kontakt, auto, "Nowe", "Dawid"]
+                    database.dodaj_zadanie(nowy_wiersz)
+                    st.toast("✅ Zlecenie wysłane do kierowcy!", icon="🚚")
+                else:
+                    st.error("Uzupełnij nazwę klienta i adres!")
+
+    # --- ZAKŁADKA 2: AWIZACJE ---
+    with tab_awizacja:
+        with st.form("form_awizacja", clear_on_submit=True):
+            st.warning("🏢 Powiadomienie trafi wyłącznie na tablicę Magazynu. Zlecenie nie pojawi się u kierowcy.")
+            col1, col2 = st.columns(2)
+            with col1:
+                data_awiz = st.date_input("Data przyjazdu klienta", key="d_a")
+                godzina_awiz = st.time_input("Szacowana godzina", key="g_a")
+                dzial_awiz = st.selectbox("Dział", ["Rental", "Realizacja"], key="dz_a")
+                typ_akcji_awiz = st.selectbox("Co się dzieje na magazynie?", ["Klient odbiera sprzęt", "Klient zwraca sprzęt"])
+            with col2:
+                nr_projektu_awiz = st.text_input("Nr Projektu (opcjonalnie)", key="p_a")
+                klient_awiz = st.text_input("Klient (Firma) *", placeholder="Wymagane", key="k_a")
+                kto_przyjezdza = st.text_input("Kto fizycznie przyjedzie?", placeholder="np. Kurier DPD / Jan Kowalski")
+                kontakt_awiz = st.text_input("Numer telefonu (opcjonalnie)", key="tel_a")
+
+            st.markdown("<hr style='border-color: rgba(255,255,255,0.05); margin: 10px 0;'>", unsafe_allow_html=True)
+            if st.form_submit_button("Zapisz Awizację w Magazynie", type="primary"):
+                if klient_awiz:
+                    id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
+                    akcja_format = f"Magazyn: {'Odbiór przez klienta' if 'odbiera' in typ_akcji_awiz else 'Zwrot przez klienta'} - {dzial_awiz}"
+                    pelny_kontakt = f"{kontakt_awiz} | Przyjeżdża: {kto_przyjezdza}" if kto_przyjezdza else kontakt_awiz
+                    # Automatycznie czyścimy zbędne pola, przypisujemy do Magazynu jako Awizacja
+                    nowy_wiersz = [id_zadania, data_awiz.strftime("%Y-%m-%d"), godzina_awiz.strftime("%H:%M"), dzial_awiz, akcja_format, nr_projektu_awiz, klient_awiz, "MAGAZYN SQM", pelny_kontakt, "Odbiór własny", "Awizacja", "Łukasz (Magazyn)"]
+                    database.dodaj_zadanie(nowy_wiersz)
+                    st.toast("✅ Awizacja zapisana na tablicy magazynu!", icon="🏭")
+                else:
+                    st.error("Uzupełnij nazwę klienta!")
 
 @st.fragment
 def pokaz_zarzadzanie():
