@@ -47,7 +47,7 @@ if "bg_opacity" not in st.session_state:
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# --- 5. APLIKACJA STYLÓW ---
+# --- 5. APLIKACJA STYLÓW Z MODUŁU style.py ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # --- 6. EKRAN LOGOWANIA ---
