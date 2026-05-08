@@ -14,7 +14,7 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v38_stable")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v39_iron")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -26,41 +26,59 @@ if "blokada_autologowania" not in st.session_state:
 if "ustawienia_wczytane" not in st.session_state:
     st.session_state["ustawienia_wczytane"] = False
 
-# Funkcja naprawiająca błędy polskich przecinków z Google Sheets
-def wczytaj_ustawienia_z_bazy(uzytkownik):
-    try:
-        op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
+# --- 4. ZAAWANSOWANA FUNKCJA WCZYTYWANIA (ODPORNA NA F5 I CACHE) ---
+def wczytaj_ustawienia(uzytkownik):
+    # 1. Próba z Ciasteczka (Omija całkowicie opóźnienia Google Sheets i F5)
+    cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
+    cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
+    
+    if cookie_op is not None and cookie_bl is not None:
+        try:
+            st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
+            st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
+            return # Jeśli mamy ciasteczko, kończymy - to najświeższe dane!
+        except: pass
         
-        # Brutalna naprawa "polskiego przecinka" np. "0,7" -> "0.7"
-        op_str = str(op).replace(',', '.')
-        bl_str = str(bl).replace(',', '.')
+    # 2. Próba z bazy danych Google Sheets (Fallback)
+    try:
+        wynik = database.pobierz_ustawienia_uzytkownika(uzytkownik)
+        if isinstance(wynik, tuple) and len(wynik) >= 2:
+            op, bl = wynik[0], wynik[1]
+        else:
+            op, bl = 0.75, 4
+            
+        op_str = str(op).replace(',', '.').strip()
+        bl_str = str(bl).replace(',', '.').strip()
+        
+        if not op_str or op_str.lower() == 'none': op_str = "0.75"
+        if not bl_str or bl_str.lower() == 'none': bl_str = "4"
         
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str)))
         st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str))))
-    except Exception as e:
-        # Twardy fallback, jeśli z Google Sheets przyjdzie pusty rekord
+    except Exception:
+        # 3. Twardy Reset Bezpieczeństwa
         st.session_state["bg_opacity"] = 0.75
         st.session_state["bg_blur"] = 4
 
-# --- 4. LOGIKA ŁADOWANIA DANYCH Z GOOGLE SHEETS ---
+# --- 5. LOGIKA ŁADOWANIA DANYCH ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
-    wczytaj_ustawienia_z_bazy(zalogowany_cookie)
+    wczytaj_ustawienia(zalogowany_cookie)
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-# Domyślne awaryjne wartości przed załadowaniem ciasteczka
+# Domyślne wartości
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# --- 5. APLIKACJA STYLÓW Z MODUŁU style.py ---
+# --- 6. APLIKACJA STYLÓW Z MODUŁU style.py ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# --- 6. EKRAN LOGOWANIA ---
+# --- 7. EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
     st.markdown('<div class="dashboard-header"><span style="font-size:2rem;">🔐</span><span class="dashboard-title" style="margin-left:10px;">SQM DISPATCH</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Wybierz konto:</div>', unsafe_allow_html=True)
@@ -92,13 +110,13 @@ if st.session_state["zalogowany"] is None:
                     
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                     
-                    wczytaj_ustawienia_z_bazy(st.session_state["zalogowany"])
+                    wczytaj_ustawienia(st.session_state["zalogowany"])
                     st.session_state["ustawienia_wczytane"] = True
                     st.rerun()
                 else:
                     st.error("Błędny kod PIN!")
 
-# --- 7. PANEL GŁÓWNY PO ZALOGOWANIU ---
+# --- 8. PANEL GŁÓWNY PO ZALOGOWANIU ---
 else:
     uzytkownik = st.session_state["zalogowany"]
     with st.sidebar:
@@ -119,21 +137,26 @@ else:
 
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
-                # Używamy key="", co gwarantuje płynny podgląd "na żywo" na głównym ekranie
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity")
                 st.slider("Rozmycie", 0, 20, step=1, key="bg_blur")
                 
                 if st.button("💾 Zapisz jako domyślne", use_container_width=True):
-                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
+                    # 1. Wysyłamy do Google Sheets (Dla innych urządzeń)
+                    try: database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
+                    except: pass
                     
-                    # KLUCZOWE: Wymuszamy na Streamlit zapomnienie starego rekordu z arkusza!
-                    try:
-                        st.cache_data.clear()
-                        st.cache_resource.clear()
-                    except:
-                        pass
-                        
-                    st.toast("Zapisano! Ustawienia będą pamiętane.", icon="✅")
+                    # 2. Zapisujemy TWARDO do ciasteczka! (Dzięki temu F5 nas nie pokona)
+                    waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
+                    cookie_manager.set(f"ui_op_{uzytkownik}", st.session_state.bg_opacity, expires_at=waznosc)
+                    cookie_manager.set(f"ui_bl_{uzytkownik}", st.session_state.bg_blur, expires_at=waznosc)
+                    
+                    # 3. Zmuszamy chmurę do wyczyszczenia pamięci
+                    try: st.cache_data.clear()
+                    except: pass
+                    try: st.cache_resource.clear()
+                    except: pass
+                    
+                    st.toast("Zapisano! Ustawienia zabezpieczone lokalnie i w chmurze.", icon="✅")
 
         if st.button("Wyloguj się", use_container_width=True):
             try: cookie_manager.delete("zalogowany")
@@ -144,7 +167,7 @@ else:
             st.session_state["blokada_autologowania"] = True
             st.rerun()
 
-    # --- 8. ROUTING ---
+    # --- 9. ROUTING ---
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=60000, key="refresh_l")
         if wybor == "⚙️ Dashboard": ui_lukasz.pokaz_dashboard()
