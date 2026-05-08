@@ -14,7 +14,7 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v36_live")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v38_stable")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -26,23 +26,38 @@ if "blokada_autologowania" not in st.session_state:
 if "ustawienia_wczytane" not in st.session_state:
     st.session_state["ustawienia_wczytane"] = False
 
+# Funkcja naprawiająca błędy polskich przecinków z Google Sheets
+def wczytaj_ustawienia_z_bazy(uzytkownik):
+    try:
+        op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
+        
+        # Brutalna naprawa "polskiego przecinka" np. "0,7" -> "0.7"
+        op_str = str(op).replace(',', '.')
+        bl_str = str(bl).replace(',', '.')
+        
+        st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str)))
+        st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str))))
+    except Exception as e:
+        # Twardy fallback, jeśli z Google Sheets przyjdzie pusty rekord
+        st.session_state["bg_opacity"] = 0.75
+        st.session_state["bg_blur"] = 4
+
 # --- 4. LOGIKA ŁADOWANIA DANYCH Z GOOGLE SHEETS ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
-    op, bl = database.pobierz_ustawienia_uzytkownika(zalogowany_cookie)
-    st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op)))
-    st.session_state["bg_blur"] = max(0, min(20, int(bl)))
+    wczytaj_ustawienia_z_bazy(zalogowany_cookie)
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
+# Domyślne awaryjne wartości przed załadowaniem ciasteczka
 if "bg_opacity" not in st.session_state:
     st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
-# --- 5. APLIKACJA STYLÓW ---
+# --- 5. APLIKACJA STYLÓW Z MODUŁU style.py ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # --- 6. EKRAN LOGOWANIA ---
@@ -74,11 +89,10 @@ if st.session_state["zalogowany"] is None:
                 if pin == poprawne_haslo:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
+                    
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                     
-                    op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
-                    st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
-                    st.session_state.bg_blur = max(0, min(20, int(bl)))
+                    wczytaj_ustawienia_z_bazy(st.session_state["zalogowany"])
                     st.session_state["ustawienia_wczytane"] = True
                     st.rerun()
                 else:
@@ -92,7 +106,10 @@ else:
         st.markdown(f'<div class="sidebar-subheader">Zalogowano: <b>{uzytkownik}</b></div>', unsafe_allow_html=True)
         
         if uzytkownik == "Łukasz":
-            wybor = st.radio("M", ["⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", "🗓️ Kalendarz", "🏭 Logistyka", "🛠️ Konsola Admin.", "📂 Archiwum"], label_visibility="collapsed")
+            wybor = st.radio("M", [
+                "⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", 
+                "🗓️ Kalendarz", "🏭 Logistyka", "🛠️ Konsola Admin.", "📂 Archiwum"
+            ], label_visibility="collapsed")
         elif uzytkownik == "Dawid":
             wybor = st.radio("M", ["📱 Moje Zlecenia"], label_visibility="collapsed")
         else:
@@ -102,12 +119,20 @@ else:
 
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
-                # Przywrócono klucze "bg_opacity" i "bg_blur" - podgląd na żywo znów działa!
+                # Używamy key="", co gwarantuje płynny podgląd "na żywo" na głównym ekranie
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity")
                 st.slider("Rozmycie", 0, 20, step=1, key="bg_blur")
                 
                 if st.button("💾 Zapisz jako domyślne", use_container_width=True):
                     database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
+                    
+                    # KLUCZOWE: Wymuszamy na Streamlit zapomnienie starego rekordu z arkusza!
+                    try:
+                        st.cache_data.clear()
+                        st.cache_resource.clear()
+                    except:
+                        pass
+                        
                     st.toast("Zapisano! Ustawienia będą pamiętane.", icon="✅")
 
         if st.button("Wyloguj się", use_container_width=True):
@@ -130,7 +155,9 @@ else:
         elif wybor == "🛠️ Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
         elif wybor == "📂 Archiwum": ui_lukasz.pokaz_archiwum()
     elif uzytkownik == "Dawid":
-        ui_dawid.pokaz_panel() # Naprawione w samym pliku Dawida poniżej
+        _, col_main, _ = st.columns([1, 2, 1])
+        with col_main:
+            ui_dawid.pokaz_panel()
     else:
         st_autorefresh(interval=30000, key="refresh_m")
         ui_magazyn.pokaz_tablice()
