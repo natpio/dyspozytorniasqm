@@ -2,18 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import database
-
-# Lista zdefiniowanych typów akcji
-TYPY_AKCJI = [
-    "Dowóz - Rental",
-    "Odbiór - Rental",
-    "Dowóz - Realizacja",
-    "Odbiór - Realizacja",
-    "Magazyn: Odbiór przez klienta - Rental",
-    "Magazyn: Zwrot przez klienta - Rental",
-    "Magazyn: Odbiór przez klienta - Realizacja",
-    "Magazyn: Zwrot przez klienta - Realizacja"
-]
+import config  # <--- IMPORT NASZEGO NOWEGO PLIKU Z LISTĄ AUT
 
 def style_df(styler):
     """Funkcja pomocnicza do stylizowania tabel dopasowana do ciemnego motywu"""
@@ -72,7 +61,7 @@ def pokaz_dashboard():
         status_map = {'Nowe': '🔥 Nowe (Czeka)', 'Zaakceptowane': '👍 Zaakceptowane', 'W drodze': '🚜 W drodze', 'Zakończone': '✅ Zakończone', 'Awizacja': '🟠 Awizacja'}
         df_dzis['Status'] = df_dzis['Status'].map(lambda x: status_map.get(x, x))
         
-        # Filtrowanie Magazyn vs Wyjazdy (Transport)
+        # Filtrowanie Magazyn vs Wyjazdy
         df_magazyn = df_dzis[df_dzis['Typ Akcji'].str.contains("Magazyn")].copy()
         df_wyjazdy = df_dzis[~df_dzis['Typ Akcji'].str.contains("Magazyn")].copy()
 
@@ -103,15 +92,11 @@ def pokaz_dashboard():
     else:
         st.info("Brak zleceń na dzisiaj. Baza jest pusta.")
 
-# ==========================================
-# ROZDZIELONY FORMULARZ (Wyjazdy i Awizacje)
-# ==========================================
 @st.fragment
 def pokaz_formularz():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">➕</span><span class="dashboard-title">Rejestracja Zadań</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Wybierz odpowiednią zakładkę dla operacji magazynowej lub wyjazdu terenowego.</div>', unsafe_allow_html=True)
     
-    # Podział na dwie zakładki
     tab_wyjazd, tab_awizacja = st.tabs(["🚚 Zlecenie Wyjazdu (Dla Kierowcy)", "🏭 Awizacja Magazynowa (Klient u nas)"])
 
     # --- ZAKŁADKA 1: WYJAZDY ---
@@ -122,9 +107,9 @@ def pokaz_formularz():
             with col1:
                 data = st.date_input("Data wyjazdu")
                 godzina = st.time_input("Godzina na miejscu")
-                dzial = st.selectbox("Dział", ["Rental", "Realizacja"])
+                dzial = st.selectbox("Dział", config.DZIALY)
                 typ_akcji = st.selectbox("Typ zadania", ["Dowóz do klienta", "Odbiór od klienta"])
-                auto = st.selectbox("Auto", ["Bus 1 (Renault)", "Bus 2 (Peugeot)", "Ciężarówka (MAN)"])
+                auto = st.selectbox("Auto", config.LISTA_AUT)  # <--- TU KORZYSTAMY Z MODUŁU CONFIG
             with col2:
                 nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
                 klient = st.text_input("Klient (Firma) *", placeholder="Wymagane")
@@ -136,7 +121,6 @@ def pokaz_formularz():
                 if klient and lokalizacja:
                     id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
                     akcja_format = f"{'Dowóz' if 'Dowóz' in typ_akcji else 'Odbiór'} - {dzial}"
-                    # Sztywno przypisujemy Dawida i status Nowe
                     nowy_wiersz = [id_zadania, data.strftime("%Y-%m-%d"), godzina.strftime("%H:%M"), dzial, akcja_format, nr_projektu, klient, lokalizacja, kontakt, auto, "Nowe", "Dawid"]
                     database.dodaj_zadanie(nowy_wiersz)
                     st.toast("✅ Zlecenie wysłane do kierowcy!", icon="🚚")
@@ -151,7 +135,7 @@ def pokaz_formularz():
             with col1:
                 data_awiz = st.date_input("Data przyjazdu klienta", key="d_a")
                 godzina_awiz = st.time_input("Szacowana godzina", key="g_a")
-                dzial_awiz = st.selectbox("Dział", ["Rental", "Realizacja"], key="dz_a")
+                dzial_awiz = st.selectbox("Dział", config.DZIALY, key="dz_a")
                 typ_akcji_awiz = st.selectbox("Co się dzieje na magazynie?", ["Klient odbiera sprzęt", "Klient zwraca sprzęt"])
             with col2:
                 nr_projektu_awiz = st.text_input("Nr Projektu (opcjonalnie)", key="p_a")
@@ -165,7 +149,6 @@ def pokaz_formularz():
                     id_zadania = datetime.now().strftime("%Y%m%d%H%M%S")
                     akcja_format = f"Magazyn: {'Odbiór przez klienta' if 'odbiera' in typ_akcji_awiz else 'Zwrot przez klienta'} - {dzial_awiz}"
                     pelny_kontakt = f"{kontakt_awiz} | Przyjeżdża: {kto_przyjezdza}" if kto_przyjezdza else kontakt_awiz
-                    # Automatycznie czyścimy zbędne pola, przypisujemy do Magazynu jako Awizacja
                     nowy_wiersz = [id_zadania, data_awiz.strftime("%Y-%m-%d"), godzina_awiz.strftime("%H:%M"), dzial_awiz, akcja_format, nr_projektu_awiz, klient_awiz, "MAGAZYN SQM", pelny_kontakt, "Odbiór własny", "Awizacja", "Łukasz (Magazyn)"]
                     database.dodaj_zadanie(nowy_wiersz)
                     st.toast("✅ Awizacja zapisana na tablicy magazynu!", icon="🏭")
@@ -206,12 +189,7 @@ def pokaz_zarzadzanie():
             
             col_s1, col_s2 = st.columns([3, 1])
             with col_s1:
-                nowy_status_szybki = st.selectbox(
-                    "Wybierz nowy status", 
-                    statusy_opcje, 
-                    index=statusy_opcje.index(aktualny_status) if aktualny_status in statusy_opcje else 0,
-                    label_visibility="collapsed"
-                )
+                nowy_status_szybki = st.selectbox("Wybierz nowy status", statusy_opcje, index=statusy_opcje.index(aktualny_status) if aktualny_status in statusy_opcje else 0, label_visibility="collapsed")
             with col_s2:
                 if st.button("Aktualizuj Status", use_container_width=True):
                     database.aktualizuj_status(wybrane_id, nowy_status_szybki)
@@ -226,9 +204,8 @@ def pokaz_zarzadzanie():
                 with e_k1:
                     n_data = st.text_input("Data (RRRR-MM-DD)", value=str(wiersz['Data']))
                     n_godzina = st.text_input("Godzina", value=str(wiersz['Godzina']))
-                    dzial_options = ["Rental", "Realizacja"]
-                    dzial_idx = dzial_options.index(wiersz['Dział']) if wiersz['Dział'] in dzial_options else 0
-                    n_dzial = st.selectbox("Dział", dzial_options, index=dzial_idx)
+                    dzial_idx = config.DZIALY.index(wiersz['Dział']) if wiersz['Dział'] in config.DZIALY else 0
+                    n_dzial = st.selectbox("Dział", config.DZIALY, index=dzial_idx)
                     n_klient = st.text_input("Klient", value=str(wiersz['Klient']))
                 with e_k2:
                     n_status = st.text_input("Status (Ręcznie)", value=str(wiersz['Status']))
