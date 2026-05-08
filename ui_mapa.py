@@ -29,7 +29,7 @@ def geokoduj(adres):
 
 def pokaz_mape():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📍</span><span class="dashboard-title">Mapa Operacyjna & Routing</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Zlecenia i trasy wyjazdowe z podglądem harmonogramu.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Bieżący podgląd tras w oparciu o silnik Google Maps.</div>', unsafe_allow_html=True)
 
     dane = database.pobierz_wszystkie_dane()
     if not dane:
@@ -38,8 +38,17 @@ def pokaz_mape():
 
     df = pd.DataFrame(dane)
     
-    # Inicjalizacja mapy - startujemy z centralnym widokiem na Polskę
-    m = folium.Map(location=[51.9194, 19.1451], zoom_start=6, tiles="CartoDB positron")
+    # Inicjalizacja czystej mapy (bez domyślnego kafelka)
+    m = folium.Map(location=[51.9194, 19.1451], zoom_start=6, tiles=None)
+
+    # MAGIC TRICK: Wstrzyknięcie oryginalnych, dokładnych kafelków drogowych Google Maps
+    folium.TileLayer(
+        tiles='http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        attr='Google Maps',
+        name='Google Maps Drogowa',
+        overlay=False,
+        control=True
+    ).add_to(m)
 
     for _, row in df.iterrows():
         # Kolorowanie pinezek na podstawie statusu
@@ -56,10 +65,10 @@ def pokaz_mape():
             
         loc = geokoduj(row.get('Lokalizacja', ''))
         
-        # 1. Tekst po najechaniu myszką (Tooltip z DATĄ)
+        # Tooltip (po najechaniu)
         tooltip_text = f"📅 {row.get('Data', '')} | {row.get('Klient', '')} | Proj: {row.get('Nr Projektu', 'Brak')}"
         
-        # 2. Tekst po kliknięciu w pinezkę (Rozbudowana wizytówka z DATĄ)
+        # Rozbudowana wizytówka (po kliknięciu)
         popup_html = f"""
         <div style="font-family: sans-serif; min-width: 180px;">
             <div style="background: #3b82f6; color: white; padding: 5px; border-radius: 5px 5px 0 0; font-weight: bold; text-align: center;">
@@ -82,5 +91,5 @@ def pokaz_mape():
             icon=folium.Icon(color=kolor, icon=ikona, prefix='fa')
         ).add_to(m)
 
-    # Wstrzyknięcie mapy jako niezależnego komponentu HTML (Omijamy awaryjność streamlit-folium)
+    # Wstrzyknięcie mapy jako niezależnego komponentu HTML
     components.html(m._repr_html_(), height=650)
