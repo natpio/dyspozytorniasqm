@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 
 def pokaz_kalendarz():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🗓️</span><span class="dashboard-title">Harmonogram Pracy</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Niezawodny silnik kalendarza renderowany natywnie.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Interaktywny podgląd wszystkich zleceń zoptymalizowany pod tryb ciemny.</div>', unsafe_allow_html=True)
     
     dane = database.pobierz_wszystkie_dane()
     events = []
@@ -43,7 +43,7 @@ def pokaz_kalendarz():
             except Exception:
                 pass 
 
-    # Bezpiecznik: puste wydarzenie, aby kalendarz narysował siatkę
+    # Bezpiecznik: ukryte wydarzenie
     if not events:
         events.append({
             "title": "Brak zadań",
@@ -52,10 +52,9 @@ def pokaz_kalendarz():
             "textColor": "#94a3b8"
         })
 
-    # Konwertujemy nasze dane do czystego JSONa, który przekażemy do JavaScript
     events_json = json.dumps(events)
 
-    # 100% KULOODPORNY KOD HTML/JS WSTRZYKIWANY DO APLIKACJI
+    # WSTRZYKNIĘCIE KULOODPORNEGO HTML/JS Z WYGLĄDEM PREMIUM
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -63,32 +62,109 @@ def pokaz_kalendarz():
         <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
         <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
         <style>
+            /* Reset i główne tło iframe */
             body {{
                 margin: 0;
-                padding: 10px;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                padding: 5px;
+                font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: transparent;
             }}
+            
+            /* Główny kontener kalendarza (Light Mode) */
             #calendar {{
                 background-color: #ffffff;
-                border-radius: 15px;
+                border-radius: 20px;
                 padding: 20px;
-                box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.04);
+                border: 1px solid #f1f5f9;
             }}
-            .fc-toolbar-title {{ font-weight: 800 !important; color: #0f172a; }}
-            .fc-button-primary {{ background-color: #3b82f6 !important; border-color: #3b82f6 !important; border-radius: 8px !important; text-transform: capitalize !important; }}
-            .fc-button-primary:hover {{ background-color: #2563eb !important; }}
-            .fc-event {{ cursor: pointer; border-radius: 4px; border: none; padding: 4px; font-weight: bold; font-size: 0.85rem; }}
             
-            /* Automatyczny Dark Mode na poziomie HTML! */
+            /* Nagłówek i Tytuł */
+            .fc-toolbar-title {{ 
+                font-weight: 900 !important; 
+                font-size: 1.6rem !important; 
+                color: #0f172a; 
+                letter-spacing: -0.5px;
+            }}
+            
+            /* Luksusowe, zaokrąglone przyciski (Pill buttons) */
+            .fc-button-primary {{ 
+                background-color: #f8fafc !important; 
+                color: #475569 !important; 
+                border: 1px solid #e2e8f0 !important; 
+                border-radius: 12px !important; 
+                text-transform: capitalize !important; 
+                font-weight: 600 !important;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+                transition: all 0.2s ease !important;
+                padding: 8px 16px !important;
+            }}
+            .fc-button-primary:hover {{ 
+                background-color: #f1f5f9 !important; 
+                color: #0f172a !important; 
+                transform: translateY(-1px); 
+            }}
+            .fc-button-primary:not(:disabled).fc-button-active, 
+            .fc-button-primary:not(:disabled):active {{ 
+                background-color: #3b82f6 !important; 
+                color: #ffffff !important; 
+                border-color: #3b82f6 !important; 
+                box-shadow: 0 4px 12px rgba(59,130,246,0.3) !important;
+            }}
+            
+            /* Wygląd pojedynczych zleceń */
+            .fc-event {{ 
+                border-radius: 6px !important; 
+                border: none !important; 
+                padding: 5px 8px !important; 
+                font-weight: 700 !important; 
+                font-size: 0.8rem !important; 
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; 
+                cursor: pointer; 
+                transition: transform 0.15s ease; 
+            }}
+            .fc-event:hover {{ transform: scale(1.02); }}
+            
+            /* Złagodzenie siatki dni */
+            .fc-theme-standard td, .fc-theme-standard th {{ border-color: #e2e8f0 !important; }}
+            .fc-col-header-cell-cushion {{ color: #64748b !important; text-decoration: none !important; font-weight: 700 !important; padding: 10px !important; }}
+            .fc-daygrid-day-number {{ color: #475569 !important; text-decoration: none !important; font-weight: 600 !important; }}
+            
+            /* ========================================= */
+            /* 🌙 PREMIUM DARK MODE (Glassmorphism)      */
+            /* ========================================= */
             @media (prefers-color-scheme: dark) {{
                 #calendar {{ 
-                    background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); 
-                    border: 1px solid #334155; 
+                    background: linear-gradient(145deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.9)); 
+                    backdrop-filter: blur(15px);
+                    -webkit-backdrop-filter: blur(15px);
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
                 }}
-                .fc-toolbar-title, .fc-col-header-cell-cushion, .fc-daygrid-day-number {{ color: #f8fafc !important; text-decoration: none; }}
-                .fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid {{ border-color: #334155 !important; }}
-                .fc-list-day-cushion {{ background-color: #1e293b !important; color: #f8fafc !important; }}
+                
+                .fc-toolbar-title {{ color: #f8fafc !important; }}
+                .fc-col-header-cell-cushion, .fc-daygrid-day-number {{ color: #cbd5e1 !important; }}
+                
+                /* Bardzo subtelna siatka w nocy */
+                .fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid {{ 
+                    border-color: rgba(255,255,255,0.06) !important; 
+                }}
+                
+                /* Ciemne przyciski */
+                .fc-button-primary {{ 
+                    background-color: rgba(255,255,255,0.05) !important; 
+                    color: #cbd5e1 !important; 
+                    border-color: rgba(255,255,255,0.1) !important; 
+                }}
+                .fc-button-primary:hover {{ 
+                    background-color: rgba(255,255,255,0.1) !important; 
+                    color: #f8fafc !important; 
+                }}
+                
+                /* Widok listy i dzisiejszy dzień */
+                .fc-list-day-cushion {{ background-color: rgba(15, 23, 42, 0.8) !important; color: #f8fafc !important; }}
                 .fc-list-event:hover td {{ background-color: rgba(255,255,255,0.05) !important; }}
+                .fc-day-today {{ background-color: rgba(59, 130, 246, 0.1) !important; }}
             }}
         </style>
     </head>
@@ -99,7 +175,9 @@ def pokaz_kalendarz():
                 var calendarEl = document.getElementById('calendar');
                 var calendar = new FullCalendar.Calendar(calendarEl, {{
                     initialView: 'dayGridMonth',
-                    height: 650, /* Gwarantuje, że kalendarz nie zapadnie się pod ziemię */
+                    height: 750,
+                    contentHeight: 'auto',
+                    firstDay: 1, /* Tydzień zaczyna się od poniedziałku */
                     headerToolbar: {{
                         left: 'prev,next today',
                         center: 'title',
@@ -114,5 +192,4 @@ def pokaz_kalendarz():
     </html>
     """
 
-    # Wstrzyknięcie kodu HTML bezpośrednio na stronę, wymuszając 700 pikseli wysokości
-    components.html(html_code, height=700)
+    components.html(html_code, height=800)
