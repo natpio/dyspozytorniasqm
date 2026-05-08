@@ -8,7 +8,7 @@ import ui_dawid
 import ui_magazyn
 import ui_mapa      
 import ui_kalendarz 
-import ui_uzytkownicy # <--- NASZ NOWY MODUŁ ZARZĄDZANIA
+import ui_uzytkownicy
 import database
 import style 
 
@@ -16,13 +16,15 @@ import style
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v50_users")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v55_premium")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
     st.session_state["zalogowany"] = None
 if "rola" not in st.session_state:
     st.session_state["rola"] = None
+if "wybrane_konto" not in st.session_state:
+    st.session_state["wybrane_konto"] = None
 if "blokada_autologowania" not in st.session_state:
     st.session_state["blokada_autologowania"] = False
 if "ustawienia_wczytane" not in st.session_state:
@@ -35,7 +37,7 @@ def pobierz_role_z_bazy(login):
     for u in uzytkownicy:
         if str(u.get("Login", "")) == login:
             return str(u.get("Rola", ""))
-    return "Admin" # Fallback awaryjny
+    return "Admin"
 
 # --- 4. ZAAWANSOWANA FUNKCJA WCZYTYWANIA UI ---
 def wczytaj_ustawienia(uzytkownik):
@@ -86,44 +88,132 @@ if "bg_blur" not in st.session_state:
 # --- 6. APLIKACJA STYLÓW ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# --- 7. DYNAMICZNY EKRAN LOGOWANIA ---
+# --- 7. PREMIUM EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
-    st.markdown('<div class="dashboard-header"><span style="font-size:2rem;">🔐</span><span class="dashboard-title" style="margin-left:10px;">SQM DISPATCH</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Zaloguj się do systemu:</div>', unsafe_allow_html=True)
     
-    # Pobieramy na żywo listę użytkowników z arkusza "Uzytkownicy"
+    # CSS definiujący nowoczesny wygląd karty logowania (Glassmorphism)
+    st.markdown("""
+    <style>
+    .login-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 8vh;
+    }
+    .login-card {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 40px 50px;
+        width: 100%;
+        max-width: 650px;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .login-title {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: #f8fafc;
+        margin-bottom: 5px;
+        letter-spacing: -1px;
+    }
+    .login-subtitle {
+        font-size: 1.1rem;
+        color: #94a3b8;
+        margin-bottom: 35px;
+    }
+    /* Stylizacja przycisków wyboru konta */
+    div[data-testid="stButton"] > button {
+        border-radius: 16px !important;
+        height: auto !important;
+        padding: 15px 10px !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        background-color: rgba(255,255,255,0.03) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        border-color: #3b82f6 !important;
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.3) !important;
+        color: #ffffff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     lista_uz = database.pobierz_uzytkownikow()
     
-    # TRYB AWARYJNY: Jeśli arkusz jest pusty lub źle wpięty, pozwólmy zalogować się Łukaszowi by to naprawić
     if not lista_uz:
         st.warning("⚠️ Baza użytkowników jest pusta! Uruchamiam tryb awaryjny (Login: Łukasz, PIN: 1234)")
         lista_uz = [{"Login": "Łukasz", "PIN": "1234", "Rola": "Admin"}]
+
+    _, col_center, _ = st.columns([1, 2, 1])
+
+    with col_center:
+        st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
+        st.markdown('<div class="login-title">🔐 SQM DISPATCH</div>', unsafe_allow_html=True)
         
-    nazwy_uz = [str(u["Login"]) for u in lista_uz]
-    
-    col_log, _ = st.columns([1, 2])
-    with col_log:
-        wybrane_konto = st.selectbox("Wybierz swoje konto:", ["-- Wybierz --"] + nazwy_uz)
-        
-        if wybrane_konto != "-- Wybierz --":
-            pin = st.text_input("Podaj kod PIN", type="password")
-            if st.button("Zaloguj", type="primary", use_container_width=True):
-                # Szukamy przypisanego do loginu PINu i Roli w pobranej liście
-                dane_konta = next((u for u in lista_uz if str(u["Login"]) == wybrane_konto), None)
+        # WIDOK 1: WYBÓR KONTA (Kafelki)
+        if st.session_state["wybrane_konto"] is None:
+            st.markdown('<div class="login-subtitle">Wybierz swój profil, aby wejść do systemu</div>', unsafe_allow_html=True)
+            
+            # Układamy przyciski w siatkę (3 w rzędzie)
+            cols = st.columns(3)
+            for i, uz in enumerate(lista_uz):
+                login = str(uz["Login"])
+                rola = str(uz.get("Rola", ""))
                 
-                if dane_konta and str(dane_konta["PIN"]) == pin:
-                    st.session_state["zalogowany"] = wybrane_konto
-                    st.session_state["rola"] = str(dane_konta["Rola"])
-                    st.session_state["blokada_autologowania"] = False
-                    
-                    ts_log = str(int(time.time() * 1000))
-                    cookie_manager.set("zalogowany", wybrane_konto, expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts_log}")
-                    
-                    wczytaj_ustawienia(wybrane_konto)
-                    st.session_state["ustawienia_wczytane"] = True
+                # Dynamiczna ikona bazująca na roli z Google Sheets
+                if rola == "Admin": icon = "👨‍💼"
+                elif rola == "Kierowca": icon = "🚚"
+                elif rola == "Magazyn": icon = "🏭"
+                else: icon = "👤"
+                
+                with cols[i % 3]:
+                    # Używamy natywnych przycisków, ale stylizowanych przez nasz CSS wyżej
+                    if st.button(f"{icon}\n\n{login}", key=f"btn_{login}", use_container_width=True):
+                        st.session_state["wybrane_konto"] = login
+                        st.rerun()
+                        
+        # WIDOK 2: WPISYWANIE PINU
+        else:
+            wybrane_konto = st.session_state["wybrane_konto"]
+            dane_konta = next((u for u in lista_uz if str(u["Login"]) == wybrane_konto), None)
+            rola = str(dane_konta.get("Rola", "")) if dane_konta else ""
+            icon = "👨‍💼" if rola == "Admin" else "🚚" if rola == "Kierowca" else "🏭" if rola == "Magazyn" else "👤"
+
+            st.markdown(f'<div class="login-subtitle" style="color: #3b82f6; font-weight: bold;">{icon} Zaloguj jako: {wybrane_konto}</div>', unsafe_allow_html=True)
+            
+            pin = st.text_input("Wprowadź kod PIN", type="password", placeholder="****")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("🔙 Zmień konto", use_container_width=True):
+                    st.session_state["wybrane_konto"] = None
                     st.rerun()
-                else:
-                    st.error("Błędny kod PIN!")
+            with c2:
+                if st.button("Wejdź", type="primary", use_container_width=True):
+                    if dane_konta and str(dane_konta["PIN"]) == pin:
+                        st.session_state["zalogowany"] = wybrane_konto
+                        st.session_state["rola"] = rola
+                        st.session_state["blokada_autologowania"] = False
+                        
+                        ts_log = str(int(time.time() * 1000))
+                        cookie_manager.set("zalogowany", wybrane_konto, expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts_log}")
+                        
+                        wczytaj_ustawienia(wybrane_konto)
+                        st.session_state["ustawienia_wczytane"] = True
+                        st.rerun()
+                    else:
+                        st.error("Błędny kod PIN!")
+                        
+        st.markdown('</div></div>', unsafe_allow_html=True) # Zamykamy tagi CSS
+
 
 # --- 8. PANEL GŁÓWNY PO ZALOGOWANIU ---
 else:
@@ -134,7 +224,6 @@ else:
         st.markdown('<div class="sidebar-header">SQM DISPATCH</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sidebar-subheader">Zalogowano: <b>{uzytkownik}</b> <br><span style="font-size: 0.8rem; color: #94a3b8;">Rola: {rola}</span></div>', unsafe_allow_html=True)
         
-        # --- DYNAMICZNE MENU NA PODSTAWIE ROLI ---
         if rola == "Admin":
             wybor = st.radio("M", [
                 "⚙️ Dashboard", "➕ Nowy Wpis", "📍 Mapa Routing", 
@@ -172,6 +261,7 @@ else:
             except Exception: pass
             st.session_state["zalogowany"] = None
             st.session_state["rola"] = None
+            st.session_state["wybrane_konto"] = None
             st.session_state["ustawienia_wczytane"] = False
             st.session_state["blokada_autologowania"] = True
             st.rerun()
