@@ -16,10 +16,10 @@ def zastosuj_style(opacity, blur):
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
-    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
-    [data-testid="stHeader"] { display: none !important; }
+    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT - NAPRAWIONE */
+    [data-testid="stHeader"] { background-color: transparent !important; } /* Pasek jest przezroczysty, ale przycisk menu powraca! */
     footer { display: none !important; }
-    #MainMenu { visibility: hidden !important; }
+    #MainMenu { display: none !important; }
     .stDeployButton { display: none !important; }
 
     /* TŁO I MGŁA NA GŁÓWNYM EKRANIE */
