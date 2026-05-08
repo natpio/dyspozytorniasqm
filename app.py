@@ -8,13 +8,13 @@ import ui_magazyn
 import ui_mapa      
 import ui_kalendarz 
 import database
-import base64
+import style  # <--- NASZ NOWY MODUŁ
 
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH Dashboard", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK (Pamięć 30 dni) ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_ultra_pro_v27")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_ultra_pro_v28")
 
 # --- 3. INICJALIZACJA SESJI I ZABEZPIECZEŃ ---
 if "zalogowany" not in st.session_state:
@@ -33,11 +33,10 @@ if "blokada_zapisu" not in st.session_state:
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 
 if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.session_state["blokada_autologowania"]:
-    st.session_state["blokada_zapisu"] = True # Blokada zapisu przy wczytywaniu profilu
+    st.session_state["blokada_zapisu"] = True
     st.session_state["zalogowany"] = zalogowany_cookie
     
     op, bl = database.pobierz_ustawienia_uzytkownika(zalogowany_cookie)
-    # Zabezpieczenie przed błędem StreamlitValueAboveMaxError (limit 1.0 dla opacity)
     st.session_state.bg_opacity = max(0.0, min(1.0, float(op)))
     st.session_state.bg_blur = max(0, min(20, int(bl)))
     
@@ -50,141 +49,14 @@ if "bg_blur" not in st.session_state:
     st.session_state.bg_blur = 4
 
 def zapisz_zmiany_ui():
-    """Zapisuje ustawienia do bazy tylko gdy blokada jest zdjęta"""
+    """Zapisuje ustawienia do bazy"""
     if st.session_state["zalogowany"] and not st.session_state["blokada_zapisu"]:
-        database.zapisz_ustawienia_uzytkownika(
-            st.session_state["zalogowany"], 
-            st.session_state.bg_opacity, 
-            st.session_state.bg_blur
-        )
+        database.zapisz_ustawienia_uzytkownika(st.session_state["zalogowany"], st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# --- 5. OBSŁUGA GRAFIKI TŁA ---
-def get_base64_of_bin_file(bin_file):
-    try:
-        with open(bin_file, 'rb') as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-    except FileNotFoundError:
-        return None
+# --- 5. APLIKACJA STYLÓW Z ZEWNĘTRZNEGO MODUŁU ---
+style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
-bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
-
-# --- 6. AGRESYWNY KOD CSS (GWARANTOWANY CIEMNY SIDEBAR) ---
-local_css_string = """
-/* UKRYWANIE ELEMENTÓW SYSTEMOWYCH */
-[data-testid="stHeader"] { display: none !important; }
-footer { display: none !important; }
-#MainMenu { visibility: hidden !important; }
-.stDeployButton { display: none !important; }
-
-/* TŁO I MGŁA NA GŁÓWNYM EKRANIE */
-.stApp {
-    background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-attachment: fixed !important;
-}
-.stApp::before {
-    content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: rgba(247, 249, 252, OPACITY_PLACEHOLDER) !important; 
-    backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important; 
-    -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important;
-    z-index: 0 !important; pointer-events: none !important; 
-}
-
-/* ========================================= */
-/* 🔥 BEZKOMPROMISOWY CIEMNY SIDEBAR 🔥      */
-/* ========================================= */
-[data-testid="stSidebar"], section[data-testid="stSidebar"] {
-    background-color: #0f172a !important; /* Sztywne tło awaryjne */
-    background-image: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-    border-right: 1px solid rgba(255,255,255,0.05) !important;
-}
-/* Streamlit czasem dodaje wew. kontener, który nadpisuje tło - blokujemy to: */
-[data-testid="stSidebar"] > div:first-child {
-    background-color: transparent !important;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) !important;
-    background-size: 16px 16px !important;
-}
-/* Wymuszenie białego koloru WSZYSTKICH tekstów w pasku bocznym */
-[data-testid="stSidebar"] * { 
-    color: #f8fafc !important; 
-}
-
-.sidebar-header { 
-    background: -webkit-linear-gradient(45deg, #60a5fa, #f8fafc);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    font-size: 1.6rem !important; font-weight: 900 !important; padding: 1.5rem 1rem 0.5rem 1rem !important;
-}
-.sidebar-subheader { font-size: 0.85rem !important; color: #94a3b8 !important; padding: 0 1rem 1.2rem 1rem !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
-
-/* 🔥 INTERAKTYWNE MENU RADIOWE (USUNIĘCIE KROPEK STREAMLIT) 🔥 */
-[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
-
-div[role="radiogroup"] > label {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 12px !important; padding: 14px 18px !important; margin: 6px 1rem !important;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-}
-div[role="radiogroup"] > label:hover { 
-    background: rgba(255, 255, 255, 0.08) !important; 
-    transform: translateX(8px) !important;
-}
-div[role="radiogroup"] > label[data-checked="true"] { 
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)) !important;
-    border-left: 4px solid #3b82f6 !important; transform: translateX(8px) !important;
-}
-div[role="radiogroup"] > label p { font-size: 1rem !important; font-weight: 500 !important; margin-left: 5px !important; }
-
-/* SUWAKI USTAWIEŃ UI W PASKU */
-[data-testid="stSidebar"] [data-testid="stExpander"] {
-    background-color: rgba(15, 23, 42, 0.5) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    margin: 1rem !important;
-}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary { background-color: transparent !important; }
-
-/* PRZYCISK WYLOGOWANIA - RED DANGER */
-div[data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
-    color: white !important; font-weight: 800 !important; border-radius: 12px !important; border: none !important;
-    width: 100% !important; padding: 12px !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
-    margin-top: 1.5rem;
-}
-div[data-testid="stSidebar"] .stButton > button:hover {
-    background: linear-gradient(135deg, #f87171 0%, #dc2626 100%) !important;
-}
-
-/* ========================================= */
-/* KARTY DASHBOARDU                          */
-/* ========================================= */
-.card-container { 
-    background: white !important; border-radius: 15px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.05) !important; 
-    padding: 20px !important; margin-bottom: 15px !important; border: 1px solid #e2e8f0 !important; 
-}
-.card-value { font-size: 2.4rem !important; font-weight: bold !important; color: #0f172a !important; }
-
-/* 🌙 DARK MODE (Ciemny motyw przeglądarki) */
-@media (prefers-color-scheme: dark) {
-    .stApp::before { background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; }
-    .card-container {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)) !important;
-        border: 1px solid #334155 !important;
-    }
-    .card-value, .dashboard-title { color: #f8fafc !important; }
-}
-"""
-
-# Wstrzykiwanie zmiennych do CSS
-local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
-local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(st.session_state.bg_opacity))
-local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(st.session_state.bg_blur))
-st.markdown(f'<style>{local_css_string}</style>', unsafe_allow_html=True)
-
-# --- 7. EKRAN LOGOWANIA (Z 3 DUŻYMI PRZYCISKAMI) ---
+# --- 6. EKRAN LOGOWANIA (Z 3 DUŻYMI PRZYCISKAMI) ---
 if st.session_state["zalogowany"] is None:
     st.markdown('<div class="dashboard-header"><span style="font-size:2rem;">🔐</span><span class="dashboard-title" style="margin-left:10px;">SQM DISPATCH</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Wybierz konto, aby wejść do systemu:</div>', unsafe_allow_html=True)
@@ -204,7 +76,6 @@ if st.session_state["zalogowany"] is None:
             pin = st.text_input("Podaj kod PIN", type="password")
             if st.button("Zaloguj", type="primary", use_container_width=True):
                 key = st.session_state["wybrane_konto"].lower().replace("ł", "l")
-                
                 try:
                     poprawne_haslo = str(st.secrets["passwords"][key])
                 except KeyError:
@@ -216,7 +87,6 @@ if st.session_state["zalogowany"] is None:
                     st.session_state["zalogowany"] = st.session_state["wybrane_konto"]
                     st.session_state["blokada_autologowania"] = False
                     
-                    # Zapis ciasteczka 30 dni
                     cookie_manager.set("zalogowany", st.session_state["zalogowany"], expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                     
                     op, bl = database.pobierz_ustawienia_uzytkownika(st.session_state["zalogowany"])
@@ -228,7 +98,7 @@ if st.session_state["zalogowany"] is None:
                 else:
                     st.error("Błędny kod PIN!")
 
-# --- 8. PANEL GŁÓWNY PO ZALOGOWANIU ---
+# --- 7. PANEL GŁÓWNY PO ZALOGOWANIU ---
 else:
     uzytkownik = st.session_state["zalogowany"]
     with st.sidebar:
@@ -247,13 +117,11 @@ else:
 
         st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
 
-        # Ustawienia UI tylko dla Łukasza
         if uzytkownik == "Łukasz":
             with st.expander("🛠️ Ustawienia UI"):
                 st.slider("Krycie", 0.0, 1.0, step=0.05, key="bg_opacity", on_change=zapisz_zmiany_ui)
                 st.slider("Rozmycie", 0, 20, step=1, key="bg_blur", on_change=zapisz_zmiany_ui)
 
-        # Bezpieczne wylogowanie z ominięciem błędu KeyError biblioteki
         if st.button("Wyloguj się", use_container_width=True):
             st.session_state["blokada_zapisu"] = True
             try:
@@ -265,7 +133,7 @@ else:
             st.session_state["blokada_autologowania"] = True
             st.rerun()
 
-    # --- 9. PEŁNY ROUTING ---
+    # --- 8. PEŁNY ROUTING ---
     if uzytkownik == "Łukasz":
         st_autorefresh(interval=60000, key="refresh_l")
         if wybor == "⚙️ Dashboard": ui_lukasz.pokaz_dashboard()
