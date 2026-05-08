@@ -22,13 +22,23 @@ def get_worksheet(nazwa_arkusza="Arkusz1"):
     gc = get_gspread_client()
     return gc.open("AplikacjaKasprzak").worksheet(nazwa_arkusza)
 
+# --- FUNKCJE: OBSŁUGA ZADAŃ ---
+
 def pobierz_wszystkie_dane():
     """Pobiera wszystkie aktywne zadania z głównego arkusza."""
-    return get_worksheet("Arkusz1").get_all_records()
+    try:
+        return get_worksheet("Arkusz1").get_all_records()
+    except Exception as e:
+        print(f"Błąd pobierania danych: {e}")
+        return []
 
 def pobierz_archiwum():
     """Pobiera wszystkie zarchiwizowane zadania z zakładki Archiwum."""
-    return get_worksheet("Archiwum").get_all_records()
+    try:
+        return get_worksheet("Archiwum").get_all_records()
+    except Exception as e:
+        print(f"Błąd pobierania archiwum: {e}")
+        return []
 
 def dodaj_zadanie(wiersz):
     """Dodaje nowy wiersz z zadaniem na koniec głównego arkusza."""
@@ -61,11 +71,8 @@ def archiwizuj_zadanie(id_zadania):
     try:
         komorka = arkusz.find(str(id_zadania))
         if komorka:
-            # Kopiowanie danych wiersza
             wiersz = arkusz.row_values(komorka.row)
-            # Wklejenie do archiwum
             archiwum.append_row(wiersz)
-            # Usunięcie z głównego widoku
             arkusz.delete_rows(komorka.row)
     except Exception as e:
         pass
@@ -76,16 +83,14 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
     try:
         komorka = arkusz.find(str(id_zadania))
         if komorka:
-            # Pobieramy zakres komórek dla danego wiersza (zakładamy kolumny od A do L)
             lista_komorek = arkusz.range(f"A{komorka.row}:L{komorka.row}")
             for i, wartosc in enumerate(nowy_wiersz):
                 lista_komorek[i].value = str(wartosc)
-            # Zbiorcza aktualizacja komórek (szybsze i bezpieczniejsze niż pojedynczo)
             arkusz.update_cells(lista_komorek)
     except Exception as e:
         pass
 
-# --- NOWE FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
+# --- FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
 
 def pobierz_ustawienia_uzytkownika(uzytkownik):
     """Pobiera opacity i blur dla konkretnego uzytkownika. Jesli brak, zwraca domyslne."""
@@ -99,7 +104,7 @@ def pobierz_ustawienia_uzytkownika(uzytkownik):
         print(f"Błąd pobierania ustawień: {e}")
         pass
     
-    return 0.75, 4  # Wartosci domyslne, jesli uzytkownik nie ma jeszcze zapisanych ustawien
+    return 0.75, 4 
 
 def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
     """Zapisuje lub aktualizuje ustawienia w arkuszu 'Ustawienia'."""
@@ -108,19 +113,39 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
         rekordy = arkusz.get_all_records()
         
         wiersz_do_aktualizacji = None
-        # Szukamy, w którym wierszu jest nasz użytkownik (na wypadek, gdy funkcja find() z gspread zawiedzie)
         for i, r in enumerate(rekordy):
             if str(r.get('Uzytkownik', '')) == str(uzytkownik):
-                wiersz_do_aktualizacji = i + 2  # +2 bo wiersz 1 to nagłówki, a Python liczy listy od zera
+                wiersz_do_aktualizacji = i + 2  
                 break
                 
         if wiersz_do_aktualizacji:
-            # Aktualizacja istniejącego wpisu użytkownika (Kolumna 2 to Opacity, 3 to Blur)
             arkusz.update_cell(wiersz_do_aktualizacji, 2, float(opacity))
             arkusz.update_cell(wiersz_do_aktualizacji, 3, int(blur))
         else:
-            # Użytkownika nie ma jeszcze na liście - dodajemy nowy wiersz na samym dole
             arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
             
     except Exception as e:
         print(f"Błąd zapisu ustawień: {e}")
+
+# --- NOWE FUNKCJE: OBSŁUGA UŻYTKOWNIKÓW (LOGOWANIE) ---
+
+def pobierz_uzytkownikow():
+    """Pobiera listę użytkowników z arkusza 'Uzytkownicy' do autoryzacji."""
+    try:
+        sheet = get_worksheet("Uzytkownicy")
+        zapisy = sheet.get_all_records()
+        return zapisy
+    except Exception as e:
+        print(f"Błąd pobierania użytkowników: {e}")
+        return []
+
+def dodaj_nowego_uzytkownika(nowy_wiersz):
+    """Dodaje nowego użytkownika (Login, PIN, Rola) do arkusza 'Uzytkownicy'."""
+    try:
+        sheet = get_worksheet("Uzytkownicy")
+        # Formatujemy na stringi dla bezpieczeństwa przed wysłaniem
+        wiersz_str = [str(x) for x in nowy_wiersz]
+        sheet.append_row(wiersz_str)
+    except Exception as e:
+        print(f"Błąd dodawania użytkownika: {e}")
+        raise e
