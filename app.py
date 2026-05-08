@@ -17,7 +17,7 @@ import config
 st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
 
 # --- 2. OBSŁUGA CIASTECZEK (Persystencja sesji) ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v60_final_ui")
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v61_perfect_ui")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -42,7 +42,7 @@ def pobierz_role_z_bazy(login):
 
 # --- 4. FUNKCJA WCZYTYWANIA USTAWIEŃ UI ---
 def wczytaj_ustawienia(uzytkownik):
-    """Pobiera preferencje wizualne (Opacity/Blur) z ciasteczek lub Google Sheets"""
+    """Pobiera preferencje wizualne z ciasteczek lub Google Sheets"""
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
     
@@ -83,60 +83,60 @@ if "bg_blur" not in st.session_state:
 # --- 6. APLIKACJA STYLÓW TŁA ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# --- 7. FIX: PREMIUM EKRAN LOGOWANIA ---
+# --- 7. FIX: NIEZNISZCZALNY EKRAN LOGOWANIA (Marker CSS) ---
 if st.session_state["zalogowany"] is None:
     
-    # CSS transformujący środkową kolumnę w elegancką kartę
+    # CSS używający technologii :has() - formatuje TYLKO tę kolumnę, która ma w sobie znacznik .login-marker
     st.markdown("""
     <style>
-    /* Stylizacja 'szklanej' karty logowania */
-    div[data-testid="column"]:nth-of-type(2) {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.98));
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 28px;
-        padding: 45px 35px;
-        box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7);
-        color: #f8fafc;
+    /* Prawdziwe celowanie w naszą kolumnę */
+    div[data-testid="column"]:has(.login-marker) {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98)) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 28px !important;
+        padding: 40px !important;
+        box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8) !important;
         margin-top: 5vh;
     }
 
-    /* Poprawa czytelności etykiet i tekstów */
-    div[data-testid="column"]:nth-of-type(2) label {
-        color: #e2e8f0 !important;
-        font-weight: 600 !important;
-        margin-bottom: 8px !important;
-    }
-    div[data-testid="column"]:nth-of-type(2) p {
-        color: #94a3b8 !important;
-        text-align: center;
-    }
-
-    /* Stylizacja przycisków wyboru użytkownika */
-    div[data-testid="stButton"] > button {
-        border-radius: 14px !important;
-        padding: 12px !important;
-        font-weight: 700 !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        background-color: rgba(255,255,255,0.04) !important;
+    /* Wymuszamy czytelne białe teksty wewnątrz karty logowania */
+    div[data-testid="column"]:has(.login-marker) p,
+    div[data-testid="column"]:has(.login-marker) label,
+    div[data-testid="column"]:has(.login-marker) h1 {
         color: #f8fafc !important;
-        transition: all 0.25s ease !important;
-    }
-    div[data-testid="stButton"] > button:hover {
-        border-color: #3b82f6 !important;
-        background-color: rgba(59, 130, 246, 0.15) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+        text-align: center !important;
     }
 
-    /* Akcent dla przycisku wejścia */
-    div[data-testid="stButton"] > button[kind="primary"] {
-        background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
-        border: none !important;
-        height: 50px !important;
+    /* Pigułki / Przyciski uzytkowników - Mocny kontrast */
+    div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button {
+        border-radius: 16px !important;
+        padding: 15px 10px !important;
+        height: auto !important;
+        font-weight: 700 !important;
+        font-size: 1.05rem !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        background-color: rgba(255,255,255,0.1) !important;
+        color: #ffffff !important;
+        transition: all 0.2s ease-in-out !important;
     }
     
+    /* Efekt podświetlenia po najechaniu */
+    div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button:hover {
+        border-color: #3b82f6 !important;
+        background-color: rgba(59, 130, 246, 0.3) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important;
+    }
+
+    /* Przycisk akcji (Zaloguj) na kolorowo */
+    div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button[kind="primary"] {
+        background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+        border: none !important;
+    }
+    
+    /* Ukrycie paska top Streamlita */
     header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -149,11 +149,14 @@ if st.session_state["zalogowany"] is None:
     _, col_center, _ = st.columns([1, 1.2, 1])
 
     with col_center:
-        st.markdown('<h1 style="text-align: center; color: #f8fafc; font-size: 2.3rem; margin-bottom: 10px; letter-spacing: -1px;">🔐 SQM DISPATCH</h1>', unsafe_allow_html=True)
+        # MAGICZNY ZNACZNIK - na jego podstawie działa nasz CSS
+        st.markdown('<span class="login-marker"></span>', unsafe_allow_html=True)
+        
+        st.markdown('<h1 style="margin-bottom: 10px; letter-spacing: -1px;">🔐 SQM DISPATCH</h1>', unsafe_allow_html=True)
         
         # ETAP 1: WYBÓR PROFILU
         if st.session_state["wybrane_konto"] is None:
-            st.markdown('<p style="margin-bottom: 30px;">Wybierz profil, aby kontynuować</p>', unsafe_allow_html=True)
+            st.markdown('<p style="margin-bottom: 30px; font-size:1.1rem;">Wybierz profil, aby kontynuować</p>', unsafe_allow_html=True)
             
             # Siatka 3 kolumn na przyciski osób
             cols = st.columns(3)
@@ -172,23 +175,23 @@ if st.session_state["zalogowany"] is None:
             wybrane_konto = st.session_state["wybrane_konto"]
             dane_konta = next((u for u in lista_uz if str(u["Login"]) == wybrane_konto), None)
             
-            st.markdown(f'<p style="text-align: center; color: #60a5fa; font-weight: bold; font-size: 1.1rem; margin-bottom: 25px;">Zaloguj jako: {wybrane_konto}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p style="color: #60a5fa !important; font-weight: bold; font-size: 1.2rem; margin-bottom: 25px;">Zaloguj jako: {wybrane_konto}</p>', unsafe_allow_html=True)
             
             pin = st.text_input("Wprowadź swój PIN", type="password", placeholder="****")
             
             st.markdown("<br>", unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("🔙 Powrót", use_container_width=True):
+                if st.button("🔙 Zmień konto", use_container_width=True):
                     st.session_state["wybrane_konto"] = None
                     st.rerun()
             with c2:
-                if st.button("Zaloguj", type="primary", use_container_width=True):
+                if st.button("Wejdź", type="primary", use_container_width=True):
                     if dane_konta and str(dane_konta["PIN"]) == pin:
                         st.session_state["zalogowany"] = wybrane_konto
                         st.session_state["rola"] = str(dane_konta.get("Rola", "Admin"))
                         
-                        # Zapis ciasteczka logowania (30 dni)
+                        # Zapis ciasteczka logowania
                         ts = str(int(time.time() * 1000))
                         cookie_manager.set("zalogowany", wybrane_konto, expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts}")
                         
@@ -228,7 +231,6 @@ else:
                 if st.button("💾 Zastosuj na stałe", use_container_width=True):
                     database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
                     
-                    # Trwały zapis w ciasteczku przeglądarki
                     waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
                     ts = str(int(time.time() * 1000))
                     cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=waznosc, key=f"s_op_{ts}")
