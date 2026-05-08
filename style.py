@@ -99,19 +99,26 @@ def zastosuj_style(opacity, blur):
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary { background-color: transparent !important; }
 
-    /* 🔥 PRZYCISK WYLOGOWANIA (Naprawa białego tekstu) 🔥 */
-    div[data-testid="stSidebar"] .stButton > button,
-    div[data-testid="stSidebar"] .stButton > button * {
-        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
-        color: white !important; font-weight: 800 !important; border-radius: 12px !important; border: none !important;
-        width: 100% !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
+    /* 🔥 ULTRA MOCNY SELEKTOR DLA PRZYCISKU WYLOGUJ 🔥 */
+    section[data-testid="stSidebar"] .stButton > button {
+        background-color: #ef4444 !important;
+        background-image: none !important;
+        border: 1px solid #ef4444 !important;
+        border-radius: 12px !important;
+        padding: 12px !important;
+        margin-top: 1.5rem !important;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
     }
-    div[data-testid="stSidebar"] .stButton > button {
-        padding: 12px !important; margin-top: 1.5rem;
+    /* Gwarantuje, że tekst wewnątrz przycisku będzie BIAŁY */
+    section[data-testid="stSidebar"] .stButton > button p, 
+    section[data-testid="stSidebar"] .stButton > button div, 
+    section[data-testid="stSidebar"] .stButton > button span {
+        color: #ffffff !important;
+        font-weight: 800 !important;
     }
-    div[data-testid="stSidebar"] .stButton > button:hover,
-    div[data-testid="stSidebar"] .stButton > button:hover * {
-        background: linear-gradient(135deg, #f87171 0%, #dc2626 100%) !important;
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #dc2626 !important;
+        border: 1px solid #dc2626 !important;
     }
 
     /* ========================================= */
