@@ -162,7 +162,7 @@ else:
         if st.session_state["aktywny_modul"] == "Menu Główne":
             # --- AGREGACJA DANYCH DLA DYNAMICZNYCH LICZNIKÓW NA KAFELKACH ---
             dane_baza = database.pobierz_wszystkie_dane()
-            df_baza = pd.DataFrame(daza_baza) if dane_baza else pd.DataFrame()
+            df_baza = pd.DataFrame(dane_baza) if dane_baza else pd.DataFrame()
             dzis_str = datetime.datetime.now().strftime("%Y-%m-%d")
             
             if not df_baza.empty and 'Data' in df_baza.columns:
@@ -173,8 +173,10 @@ else:
             else:
                 count_total, count_w_drodze, count_magazyn = 0, 0, 0
                 
-            try: liczba_kont = len(database.pobierz_uzytkownikow())
-            except: liczba_kont = 0
+            try: 
+                liczba_kont = len(database.pobierz_uzytkownikow())
+            except: 
+                liczba_kont = 0
 
             st.markdown('<div style="text-align:center; margin-bottom: 40px;"><h2 style="color:white; font-weight:900; letter-spacing:-0.5px;">Główny Panel Kontrolny</h2></div>', unsafe_allow_html=True)
             
