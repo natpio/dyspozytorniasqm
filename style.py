@@ -46,7 +46,7 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 🔐 BEZPIECZNY KONTENER LOGOWANIA          */
+    /* 🔐 KONTENER EKRANU LOGOWANIA             */
     /* ========================================= */
     .login-container {
         background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.95)) !important;
@@ -85,7 +85,7 @@ def zastosuj_style(opacity, blur):
         text-align: center !important;
     }
     
-    /* Efekt podświetlenia oraz uniesienia przy najechaniu kursem */
+    /* Efekt poświaty oraz uniesienia kafelka przy najechaniu myszą */
     div[data-testid="stButton"] button:hover {
         transform: translateY(-6px) scale(1.02) !important;
         background: linear-gradient(145deg, rgba(56, 189, 248, 0.25), rgba(59, 130, 246, 0.15)) !important;
@@ -94,12 +94,12 @@ def zastosuj_style(opacity, blur):
         color: #ffffff !important;
     }
 
-    /* Wizualna odpowiedź na kliknięcie (fizyka wciskania przycisku) */
+    /* Odpowiedź kinetyczna interfejsu w momencie kliknięcia */
     div[data-testid="stButton"] button:active {
         transform: translateY(-2px) scale(0.99) !important;
     }
     
-    /* ⚡ SPERSONALIZOWANY PRZYCISK WYLOGOWANIA (TOP-BAR) ⚡ */
+    /* ⚡ SPECJALNY SELEKTOR: PRZYCISK WYLOGOWANIA (GÓRNY PASEK) ⚡ */
     div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button {
         padding: 10px !important; 
         border-radius: 14px !important; 
@@ -117,7 +117,7 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 📊 ARCHITEKTURA KART WEWNĘTRZNYCH        */
+    /* 📊 MODUŁY I KARTY STATYSTYK INTERNEKO     */
     /* ========================================= */
     .card-container { 
         background: rgba(30, 41, 59, 0.6) !important; 
@@ -138,7 +138,7 @@ def zastosuj_style(opacity, blur):
     .card-container.w-trakcie { border-left: 6px solid #10b981 !important; }
     .card-container.zakonczone { border-left: 6px solid #8b5cf6 !important; }
 
-    /* Estetyczne dostosowanie zakładek (Tabs) */
+    /* Wygładzenie i dopasowanie kontenerów kart zakładek (Tabs) */
     .stTabs [data-testid="stVerticalBlock"] {
         background: rgba(15, 23, 42, 0.35) !important;
         padding: 24px !important;
@@ -148,6 +148,7 @@ def zastosuj_style(opacity, blur):
     }
     """
 
+    # Dynamiczne podmienianie wartości konfiguracyjnych przekazanych z silnika app.py
     local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
     local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(opacity))
     local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(blur))
