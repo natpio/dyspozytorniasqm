@@ -17,7 +17,7 @@ def zastosuj_style(opacity, blur):
 
     local_css_string = """
     /* ========================================= */
-    /* 🚫 ABSOLUTNE UKRYWANIE ELEMENTÓW SYSTEMU   */
+    /* 🚫 CAŁKOWITE USUNIĘCIE ELEMENTÓW SYSTEMU   */
     /* ========================================= */
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="stSidebar"] { display: none !important; }
@@ -29,7 +29,7 @@ def zastosuj_style(opacity, blur):
     .stDeployButton { display: none !important; }
 
     /* ========================================= */
-    /* 🌌 GLOBALNE TŁO I PREMIUM GLASSMORPHISM   */
+    /* 🌌 INTEGRACJA TŁA I POWŁOKA GLASSMORPHISM */
     /* ========================================= */
     .stApp {
         background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
@@ -46,7 +46,7 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 🔐 KONTENER EKRANU LOGOWANIA             */
+    /* 🔐 BEZPIECZNY KONTENER LOGOWANIA          */
     /* ========================================= */
     .login-container {
         background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.95)) !important;
@@ -60,28 +60,32 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 🔥 POTĘŻNE KAFELKI MENU GŁÓWNEGO (HUB)    */
+    /* 🔥 TRÓJWYMIAROWE KAFELKI Z DANYMI LIVE   */
     /* ========================================= */
     div[data-testid="stButton"] button {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)) !important;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
         border-radius: 24px !important;
         padding: 35px 20px !important;
-        height: auto !important;
+        height: 150px !important;
         color: #f8fafc !important;
-        font-size: 1.25rem !important;
-        font-weight: 800 !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25) !important;
+        font-size: 1.3rem !important;
+        font-weight: 900 !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3) !important;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         white-space: pre-wrap !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        line-height: 1.5 !important;
+        text-align: center !important;
     }
     
+    /* Efekt podświetlenia oraz uniesienia przy najechaniu kursem */
     div[data-testid="stButton"] button:hover {
         transform: translateY(-6px) scale(1.02) !important;
         background: linear-gradient(145deg, rgba(56, 189, 248, 0.25), rgba(59, 130, 246, 0.15)) !important;
@@ -90,15 +94,17 @@ def zastosuj_style(opacity, blur):
         color: #ffffff !important;
     }
 
+    /* Wizualna odpowiedź na kliknięcie (fizyka wciskania przycisku) */
     div[data-testid="stButton"] button:active {
         transform: translateY(-2px) scale(0.99) !important;
     }
     
-    /* ⚡ SPECJALNY SELEKTOR: PRZYCISK WYLOGOWANIA (TOP-BAR, 4. KOLUMNA) ⚡ */
+    /* ⚡ SPERSONALIZOWANY PRZYCISK WYLOGOWANIA (TOP-BAR) ⚡ */
     div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button {
         padding: 10px !important; 
         border-radius: 14px !important; 
         font-size: 1.1rem !important;
+        height: auto !important;
         background: rgba(239, 68, 68, 0.15) !important; 
         border: 1px solid rgba(239, 68, 68, 0.4) !important;
         box-shadow: none !important;
@@ -111,7 +117,7 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 📊 MODUŁY WEWNĘTRZNE I KARTY STATYSTYK   */
+    /* 📊 ARCHITEKTURA KART WEWNĘTRZNYCH        */
     /* ========================================= */
     .card-container { 
         background: rgba(30, 41, 59, 0.6) !important; 
@@ -127,13 +133,12 @@ def zastosuj_style(opacity, blur):
     .dashboard-title { color: #f8fafc !important; font-weight: 800 !important; }
     .dashboard-subheader { color: #94a3b8 !important; }
 
-    /* Wzmocnienie akcentów kolorystycznych na kartach dashboardu */
     .card-container.wszystkie-zlecenia { border-left: 6px solid #3b82f6 !important; }
     .card-container.nowe { border-left: 6px solid #f59e0b !important; }
     .card-container.w-trakcie { border-left: 6px solid #10b981 !important; }
     .card-container.zakonczone { border-left: 6px solid #8b5cf6 !important; }
 
-    /* Estetyczne dopasowanie zakładek (Tabs) wewnątrz modułów */
+    /* Estetyczne dostosowanie zakładek (Tabs) */
     .stTabs [data-testid="stVerticalBlock"] {
         background: rgba(15, 23, 42, 0.35) !important;
         padding: 24px !important;
@@ -143,7 +148,6 @@ def zastosuj_style(opacity, blur):
     }
     """
 
-    # Dynamiczna podmiana placeholderów na realne parametry konfiguracyjne z sesji
     local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
     local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(opacity))
     local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(blur))
