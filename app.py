@@ -14,10 +14,10 @@ import style
 import config
 
 # --- 1. KONFIGURACJA STRONY ---
-st.set_page_config(layout="wide", page_title="SQM DISPATCH", page_icon="📦")
+st.set_page_config(layout="wide", page_title="SQM DISPATCH OS", page_icon="📦", initial_sidebar_state="collapsed")
 
-# --- 2. OBSŁUGA CIASTECZEK (Persystencja sesji) ---
-cookie_manager = stx.CookieManager(key="sqm_dispatch_v75_perfect_sidebar")
+# --- 2. OBSŁUGA CIASTECZEK ---
+cookie_manager = stx.CookieManager(key="sqm_dispatch_v80_premium_os")
 
 # --- 3. INICJALIZACJA SESJI ---
 if "zalogowany" not in st.session_state:
@@ -30,8 +30,9 @@ if "blokada_autologowania" not in st.session_state:
     st.session_state["blokada_autologowania"] = False
 if "ustawienia_wczytane" not in st.session_state:
     st.session_state["ustawienia_wczytane"] = False
+if "aktywny_modul" not in st.session_state:
+    st.session_state["aktywny_modul"] = "Menu Główne"
 
-# --- FUNKCJA POMOCNICZA: POBRANIE ROLI ---
 def pobierz_role_z_bazy(login):
     uzytkownicy = database.pobierz_uzytkownikow()
     for u in uzytkownicy:
@@ -39,32 +40,27 @@ def pobierz_role_z_bazy(login):
             return str(u.get("Rola", ""))
     return "Admin"
 
-# --- 4. FUNKCJA WCZYTYWANIA USTAWIEŃ UI ---
 def wczytaj_ustawienia(uzytkownik):
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
-    
     if cookie_op is not None and cookie_bl is not None:
         try:
             st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
             st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
             return
         except: pass
-        
     try:
         op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
         op_str = str(op).replace(',', '.').strip()
         bl_str = str(bl).replace(',', '.').strip()
-        
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str if op_str != 'None' else 0.75)))
         st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str if bl_str != 'None' else 4))))
     except:
         st.session_state["bg_opacity"] = 0.75
         st.session_state["bg_blur"] = 4
 
-# --- 5. LOGIKA AUTOLOGOWANIA ---
+# --- AUTOLOGOWANIE ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
-
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
     st.session_state["rola"] = pobierz_role_z_bazy(zalogowany_cookie)
@@ -72,168 +68,27 @@ if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-if "bg_opacity" not in st.session_state:
-    st.session_state.bg_opacity = 0.75
-if "bg_blur" not in st.session_state:
-    st.session_state.bg_blur = 4
+if "bg_opacity" not in st.session_state: st.session_state.bg_opacity = 0.75
+if "bg_blur" not in st.session_state: st.session_state.bg_blur = 4
 
-# --- 6. APLIKACJA STYLÓW TŁA ---
+# --- STYLE CSS ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-
-# ==========================================================
-# POTĘŻNY CSS - STYLIZACJA LOGOWANIA I PASKA BOCZNEGO
-# ==========================================================
-st.markdown("""
-<style>
-/* --- KARTA LOGOWANIA --- */
-div[data-testid="column"]:has(.login-marker) {
-    background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98)) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 28px !important;
-    padding: 40px !important;
-    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8) !important;
-    margin-top: 5vh;
-}
-div[data-testid="column"]:has(.login-marker) p, div[data-testid="column"]:has(.login-marker) label, div[data-testid="column"]:has(.login-marker) h1 {
-    color: #f8fafc !important; text-align: center !important;
-}
-div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button {
-    border-radius: 16px !important; padding: 15px 10px !important; height: auto !important; font-weight: 700 !important; font-size: 1.05rem !important; border: 1px solid rgba(255,255,255,0.2) !important; background-color: rgba(255,255,255,0.1) !important; color: #ffffff !important; transition: all 0.2s ease-in-out !important;
-}
-div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button:hover {
-    border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.3) !important; transform: translateY(-3px) !important; box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important;
-}
-div[data-testid="column"]:has(.login-marker) div[data-testid="stButton"] > button[kind="primary"] {
-    background: linear-gradient(90deg, #3b82f6, #2563eb) !important; border: none !important;
-}
-header {visibility: hidden;}
-
-/* --- PASEK BOCZNY PREMIUM --- */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-    border-right: 1px solid rgba(255,255,255,0.05) !important;
-}
-
-/* Profil Użytkownika */
-.sidebar-logo {
-    font-size: 1.8rem; font-weight: 900;
-    background: linear-gradient(90deg, #38bdf8, #818cf8);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 25px; text-align: left; letter-spacing: -1px;
-}
-.sidebar-profile {
-    display: flex; align-items: center; gap: 15px;
-    padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px;
-}
-.avatar {
-    width: 45px; height: 45px; border-radius: 50%;
-    background: linear-gradient(135deg, #38bdf8, #3b82f6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: 900; color: #fff;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-    flex-shrink: 0;
-}
-.profile-info { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
-.greeting { color: #f8fafc; font-size: 1.05rem; }
-.role-badge {
-    background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.3);
-    color: #2dd4bf; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;
-    padding: 2px 8px; border-radius: 12px; width: fit-content; text-transform: uppercase;
-}
-
-/* --- NAPRAWA MENU NAWIGACYJNEGO --- */
-.stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { display: none !important; }
-
-.stRadio div[role="radiogroup"] {
-    display: flex; flex-direction: column; gap: 6px; width: 100%;
-}
-
-.stRadio div[role="radiogroup"] label {
-    width: 100% !important; margin: 0 !important; cursor: pointer !important;
-}
-
-/* Właściwe przyciski z Wymuszeniem wyrównania do lewej */
-.stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important; /* Równo do lewej */
-    padding: 12px 18px !important;
-    background: rgba(255, 255, 255, 0.03) !important;
-    border-radius: 12px !important;
-    color: #94a3b8 !important;
-    font-size: 1.05rem !important;
-    font-weight: 500 !important;
-    border: 1px solid transparent !important;
-    transition: all 0.2s ease !important;
-    box-sizing: border-box !important;
-}
-
-/* Wymuszenie na tekście p Streamlit wyrównania do lewej bez marginesów */
-.stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child p {
-    text-align: left !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
-    background: rgba(255, 255, 255, 0.08) !important; color: #f8fafc !important;
-}
-
-.stRadio div[role="radiogroup"] label:has(input:checked) div[data-baseweb="radio"] > div:last-child {
-    background: rgba(56, 189, 248, 0.1) !important;
-    border: 1px solid rgba(56, 189, 248, 0.4) !important;
-    color: #f8fafc !important;
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.1) inset !important;
-    font-weight: 700 !important;
-}
-
-/* NAGŁÓWKI SEKCJI MENU - ABSOLUTNE POZYCJONOWANIE NAD KONTENEREM (NIE PSUJĄ LAYOUTU) */
-.stRadio div[role="radiogroup"] label:nth-child(1) { margin-top: 30px !important; position: relative; }
-.stRadio div[role="radiogroup"] label:nth-child(1)::before {
-    content: 'OPERACJE GŁÓWNE'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
-}
-.stRadio div[role="radiogroup"] label:nth-child(3) { margin-top: 35px !important; position: relative; }
-.stRadio div[role="radiogroup"] label:nth-child(3)::before {
-    content: 'DANE I LOGISTYKA'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
-}
-.stRadio div[role="radiogroup"] label:nth-child(7) { margin-top: 35px !important; position: relative; }
-.stRadio div[role="radiogroup"] label:nth-child(7)::before {
-    content: 'ZARZĄDZANIE I USTAWIENIA'; position: absolute; top: -25px; left: 5px; color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
-}
-
-/* Expander Personalizacji UI */
-[data-testid="stSidebar"] [data-testid="stExpander"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; margin-top: 15px !important;}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary { padding: 12px 18px !important; color: #94a3b8 !important; font-size: 1.05rem !important; background: rgba(255,255,255,0.03) !important; border-radius: 12px !important; transition: all 0.2s ease;}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover { color: #f8fafc !important; background: rgba(255,255,255,0.08) !important; }
-
-/* Przycisk Wyloguj */
-.logout-wrapper button {
-    background: linear-gradient(90deg, #ef4444, #dc2626) !important; color: white !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; padding: 12px !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important; margin-top: 30px !important; transition: 0.3s;
-}
-.logout-wrapper button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important; }
-</style>
-""", unsafe_allow_html=True)
-
-
-# --- 7. EKRAN LOGOWANIA ---
+# ==========================================
+# EKRAN LOGOWANIA
+# ==========================================
 if st.session_state["zalogowany"] is None:
     lista_uz = database.pobierz_uzytkownikow()
     if not lista_uz:
-        lista_uz = [{"Login": "Łukasz", "PIN": "1234", "Rola": "Admin"}]
+        lista_uz = [{"Login": "Piotr", "PIN": "1234", "Rola": "Admin"}]
 
     _, col_center, _ = st.columns([1, 1.2, 1])
-
     with col_center:
-        st.markdown('<span class="login-marker"></span>', unsafe_allow_html=True)
-        st.markdown('<h1 style="margin-bottom: 10px; letter-spacing: -1px;">🔐 SQM DISPATCH</h1>', unsafe_allow_html=True)
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.markdown('<h1 style="margin-bottom: 10px; text-align:center; letter-spacing: -1px; color:#f8fafc;">🚀 SQM OS</h1>', unsafe_allow_html=True)
         
         if st.session_state["wybrane_konto"] is None:
-            st.markdown('<p style="margin-bottom: 30px; font-size:1.1rem;">Wybierz profil, aby kontynuować</p>', unsafe_allow_html=True)
+            st.markdown('<p style="text-align:center; font-size:1.1rem; color:#cbd5e1; margin-bottom:30px;">Zidentyfikuj się</p>', unsafe_allow_html=True)
             cols = st.columns(3)
             for i, uz in enumerate(lista_uz):
                 login = str(uz["Login"])
@@ -248,17 +103,16 @@ if st.session_state["zalogowany"] is None:
             wybrane_konto = st.session_state["wybrane_konto"]
             dane_konta = next((u for u in lista_uz if str(u["Login"]) == wybrane_konto), None)
             
-            st.markdown(f'<p style="color: #60a5fa !important; font-weight: bold; font-size: 1.2rem; margin-bottom: 25px;">Zaloguj jako: {wybrane_konto}</p>', unsafe_allow_html=True)
-            pin = st.text_input("Wprowadź swój PIN", type="password", placeholder="****")
+            st.markdown(f'<p style="text-align:center; color: #38bdf8; font-weight: bold; font-size: 1.2rem; margin-bottom: 25px;">Konto: {wybrane_konto}</p>', unsafe_allow_html=True)
+            pin = st.text_input("Kod Autoryzacji", type="password", placeholder="****")
             
-            st.markdown("<br>", unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("🔙 Zmień konto", use_container_width=True):
+                if st.button("🔙 Anuluj", use_container_width=True):
                     st.session_state["wybrane_konto"] = None
                     st.rerun()
             with c2:
-                if st.button("Wejdź", type="primary", use_container_width=True):
+                if st.button("Autoryzuj", type="primary", use_container_width=True):
                     if dane_konta and str(dane_konta["PIN"]) == pin:
                         st.session_state["zalogowany"] = wybrane_konto
                         st.session_state["rola"] = str(dane_konta.get("Rola", "Admin"))
@@ -268,80 +122,86 @@ if st.session_state["zalogowany"] is None:
                         st.session_state["ustawienia_wczytane"] = True
                         st.rerun()
                     else:
-                        st.error("Błędny kod PIN!")
+                        st.error("Błąd uwierzytelnienia.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-
-# --- 8. PANEL GŁÓWNY (PO LOGOWANIU) ---
+# ==========================================
+# GŁÓWNY SYSTEM (PO ZALOGOWANIU)
+# ==========================================
 else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
-    inicjal = uzytkownik[0].upper() if uzytkownik else "U"
     
-    with st.sidebar:
-        # Nowy, dedykowany Avatar z wizerunkiem
-        st.markdown(f"""
-        <div class="sidebar-logo">SQM DISPATCH</div>
-        <div class="sidebar-profile">
-            <div class="avatar">{inicjal}</div>
-            <div class="profile-info">
-                <div class="greeting">Witaj, <b>{uzytkownik}</b></div>
-                <div class="role-badge">{rola.upper()}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Menu nawigacyjne
-        if rola == "Admin":
-            wybor = st.radio("Nawigacja", [
-                "⚙️ Dashboard", "➕ Nowy Wpis", 
-                "📍 Mapa Routing", "🗓️ Kalendarz", "🏭 Logistyka", "📂 Archiwum", 
-                "🛠️ Konsola Admin.", "👥 Użytkownicy"
-            ], label_visibility="collapsed")
-        elif rola == "Kierowca":
-            wybor = st.radio("Nawigacja", ["📱 Moje Zlecenia"], label_visibility="collapsed")
-        else: # Magazyn
-            wybor = st.radio("Nawigacja", ["🏭 Tablica Magazynowa"], label_visibility="collapsed")
-
-        # Expander opcji wizualnych
-        if rola == "Admin":
-            with st.expander("🎨 Personalizacja UI"):
-                st.slider("Przezroczystość", 0.0, 1.0, step=0.05, key="bg_opacity")
-                st.slider("Rozmycie tła", 0, 20, step=1, key="bg_blur")
-                if st.button("💾 Zastosuj na stałe", use_container_width=True):
-                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
-                    waznosc = datetime.datetime.now() + datetime.timedelta(days=30)
-                    ts = str(int(time.time() * 1000))
-                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=waznosc, key=f"s_op_{ts}")
-                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=waznosc, key=f"s_bl_{ts}")
-                    st.toast("Zapisano ustawienia!")
-
-        # Wylogowanie
-        st.markdown('<div class="logout-wrapper">', unsafe_allow_html=True)
-        if st.button("Wyloguj się ⏻", use_container_width=True):
+    # --- PŁYWAJĄCY PASEK NAWIGACYJNY (TOP-BAR) ---
+    col_logo, col_space, col_user, col_logout = st.columns([2, 5, 2, 1])
+    with col_logo:
+        st.markdown(f'<div style="font-size:1.5rem; font-weight:900; color:#38bdf8; padding-top:5px; letter-spacing:-1px;">SQM OS <span style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">| {rola.upper()}</span></div>', unsafe_allow_html=True)
+    with col_user:
+        st.markdown(f'<div style="text-align:right; padding-top:10px; color:#f8fafc; font-weight:bold;">👤 {uzytkownik}</div>', unsafe_allow_html=True)
+    with col_logout:
+        if st.button("⏻", key="btn_logout", help="Wyloguj się", use_container_width=True):
             ts = str(int(time.time() * 1000))
             try: cookie_manager.delete("zalogowany", key=f"del_log_{ts}")
             except: pass
             st.session_state.clear()
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 9. ROUTING DO MODUŁÓW ---
+    st.markdown("<hr style='border-color: rgba(255,255,255,0.1); margin-top:0px; margin-bottom:20px;'>", unsafe_allow_html=True)
+
+    # --- ROUTING DLA ADMINA ---
     if rola == "Admin":
         st_autorefresh(interval=60000, key="auto_ref_admin")
-        if wybor == "⚙️ Dashboard": ui_lukasz.pokaz_dashboard()
-        elif wybor == "➕ Nowy Wpis": ui_lukasz.pokaz_formularz()
-        elif wybor == "📍 Mapa Routing": ui_mapa.pokaz_mape()
-        elif wybor == "🗓️ Kalendarz": ui_kalendarz.pokaz_kalendarz()
-        elif wybor == "🏭 Logistyka": ui_lukasz.pokaz_magazyn()
-        elif wybor == "🛠️ Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
-        elif wybor == "📂 Archiwum": ui_lukasz.pokaz_archiwum()
-        elif wybor == "👥 Użytkownicy": ui_uzytkownicy.pokaz_panel_uzytkownikow()
-    
+        
+        if st.session_state["aktywny_modul"] == "Menu Główne":
+            # WIDOK KAFELKOWY
+            st.markdown('<div style="text-align:center; margin-bottom: 40px;"><h2 style="color:white; font-weight:900;">Wybierz Moduł Operacyjny</h2></div>', unsafe_allow_html=True)
+            
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                if st.button("⚙️\nDashboard", key="m1", use_container_width=True): st.session_state["aktywny_modul"] = "Dashboard"; st.rerun()
+                if st.button("🏭\nMagazyn", key="m5", use_container_width=True): st.session_state["aktywny_modul"] = "Magazyn"; st.rerun()
+            with c2:
+                if st.button("➕\nNowy Wpis", key="m2", use_container_width=True): st.session_state["aktywny_modul"] = "Nowy Wpis"; st.rerun()
+                if st.button("📂\nArchiwum", key="m6", use_container_width=True): st.session_state["aktywny_modul"] = "Archiwum"; st.rerun()
+            with c3:
+                if st.button("📍\nMapa i Trasy", key="m3", use_container_width=True): st.session_state["aktywny_modul"] = "Mapa Routing"; st.rerun()
+                if st.button("🛠️\nKonsola", key="m7", use_container_width=True): st.session_state["aktywny_modul"] = "Konsola Admin."; st.rerun()
+            with c4:
+                if st.button("🗓️\nKalendarz", key="m4", use_container_width=True): st.session_state["aktywny_modul"] = "Kalendarz"; st.rerun()
+                if st.button("👥\nPersonel", key="m8", use_container_width=True): st.session_state["aktywny_modul"] = "Użytkownicy"; st.rerun()
+            
+            # Subtelne ustawienia na dole
+            with st.expander("🎨 Ustawienia Interfejsu"):
+                st.slider("Przezroczystość szkła", 0.0, 1.0, step=0.05, key="bg_opacity")
+                st.slider("Rozmycie tła", 0, 20, step=1, key="bg_blur")
+                if st.button("💾 Zapisz wygląd", use_container_width=True):
+                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
+                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                    st.toast("Zapisano wizualizację!")
+
+        else:
+            # WIDOK POJEDYNCZEGO MODUŁU Z PRZYCISKIEM POWROTU
+            if st.button("⬅ Wróć do Menu Głównego", type="secondary"):
+                st.session_state["aktywny_modul"] = "Menu Główne"
+                st.rerun()
+                
+            if st.session_state["aktywny_modul"] == "Dashboard": ui_lukasz.pokaz_dashboard()
+            elif st.session_state["aktywny_modul"] == "Nowy Wpis": ui_lukasz.pokaz_formularz()
+            elif st.session_state["aktywny_modul"] == "Mapa Routing": ui_mapa.pokaz_mape()
+            elif st.session_state["aktywny_modul"] == "Kalendarz": ui_kalendarz.pokaz_kalendarz()
+            elif st.session_state["aktywny_modul"] == "Magazyn": ui_lukasz.pokaz_magazyn()
+            elif st.session_state["aktywny_modul"] == "Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
+            elif st.session_state["aktywny_modul"] == "Archiwum": ui_lukasz.pokaz_archiwum()
+            elif st.session_state["aktywny_modul"] == "Użytkownicy": ui_uzytkownicy.pokaz_panel_uzytkownikow()
+
+    # --- ROUTING DLA KIEROWCY ---
     elif rola == "Kierowca":
         _, col_mob, _ = st.columns([1, 2, 1])
         with col_mob:
             ui_dawid.pokaz_panel() 
     
-    else: # Magazyn
+    # --- ROUTING DLA MAGAZYNU ---
+    else: 
         st_autorefresh(interval=30000, key="auto_ref_mag")
         ui_magazyn.pokaz_tablice()
