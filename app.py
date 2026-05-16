@@ -16,7 +16,7 @@ import config
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM DISPATCH OS", page_icon="📦", initial_sidebar_state="collapsed")
 
-# --- 2. OBSŁUGA CIASTECZEK ---
+# --- 2. OBSŁUGA CIASTECZEK (Persystencja sesji) ---
 cookie_manager = stx.CookieManager(key="sqm_dispatch_v80_premium_os")
 
 # --- 3. INICJALIZACJA SESJI ---
@@ -33,6 +33,7 @@ if "ustawienia_wczytane" not in st.session_state:
 if "aktywny_modul" not in st.session_state:
     st.session_state["aktywny_modul"] = "Menu Główne"
 
+# --- FUNKCJA POMOCNICZA: POBRANIE ROLI ---
 def pobierz_role_z_bazy(login):
     uzytkownicy = database.pobierz_uzytkownikow()
     for u in uzytkownicy:
@@ -40,27 +41,32 @@ def pobierz_role_z_bazy(login):
             return str(u.get("Rola", ""))
     return "Admin"
 
+# --- 4. FUNKCJA WCZYTYWANIA USTAWIEŃ UI ---
 def wczytaj_ustawienia(uzytkownik):
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
+    
     if cookie_op is not None and cookie_bl is not None:
         try:
             st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
             st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
             return
         except: pass
+        
     try:
         op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
         op_str = str(op).replace(',', '.').strip()
         bl_str = str(bl).replace(',', '.').strip()
+        
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op_str if op_str != 'None' else 0.75)))
         st.session_state["bg_blur"] = max(0, min(20, int(float(bl_str if bl_str != 'None' else 4))))
     except:
         st.session_state["bg_opacity"] = 0.75
         st.session_state["bg_blur"] = 4
 
-# --- AUTOLOGOWANIE ---
+# --- 5. LOGIKA AUTOLOGOWANIA ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
+
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
     st.session_state["rola"] = pobierz_role_z_bazy(zalogowany_cookie)
@@ -68,21 +74,22 @@ if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-if "bg_opacity" not in st.session_state: st.session_state.bg_opacity = 0.75
-if "bg_blur" not in st.session_state: st.session_state.bg_blur = 4
+if "bg_opacity" not in st.session_state:
+    st.session_state.bg_opacity = 0.75
+if "bg_blur" not in st.session_state:
+    st.session_state.bg_blur = 4
 
-# --- STYLE CSS ---
+# --- 6. APLIKACJA STYLÓW TŁA ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
-# ==========================================
-# EKRAN LOGOWANIA
-# ==========================================
+# --- 7. EKRAN LOGOWANIA ---
 if st.session_state["zalogowany"] is None:
     lista_uz = database.pobierz_uzytkownikow()
     if not lista_uz:
         lista_uz = [{"Login": "Piotr", "PIN": "1234", "Rola": "Admin"}]
 
     _, col_center, _ = st.columns([1, 1.2, 1])
+
     with col_center:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<h1 style="margin-bottom: 10px; text-align:center; letter-spacing: -1px; color:#f8fafc;">🚀 SQM OS</h1>', unsafe_allow_html=True)
@@ -106,6 +113,7 @@ if st.session_state["zalogowany"] is None:
             st.markdown(f'<p style="text-align:center; color: #38bdf8; font-weight: bold; font-size: 1.2rem; margin-bottom: 25px;">Konto: {wybrane_konto}</p>', unsafe_allow_html=True)
             pin = st.text_input("Kod Autoryzacji", type="password", placeholder="****")
             
+            st.markdown("<br>", unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("🔙 Anuluj", use_container_width=True):
@@ -125,9 +133,7 @@ if st.session_state["zalogowany"] is None:
                         st.error("Błąd uwierzytelnienia.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ==========================================
-# GŁÓWNY SYSTEM (PO ZALOGOWANIU)
-# ==========================================
+# --- 8. PANEL GŁÓWNY (PO LOGOWANIU) ---
 else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
@@ -153,31 +159,48 @@ else:
         st_autorefresh(interval=60000, key="auto_ref_admin")
         
         if st.session_state["aktywny_modul"] == "Menu Główne":
-            # WIDOK KAFELKOWY
+            # WIDOK KAFELKOWY (HUB OPERACYJNY)
             st.markdown('<div style="text-align:center; margin-bottom: 40px;"><h2 style="color:white; font-weight:900;">Wybierz Moduł Operacyjny</h2></div>', unsafe_allow_html=True)
             
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                if st.button("⚙️\nDashboard", key="m1", use_container_width=True): st.session_state["aktywny_modul"] = "Dashboard"; st.rerun()
-                if st.button("🏭\nMagazyn", key="m5", use_container_width=True): st.session_state["aktywny_modul"] = "Magazyn"; st.rerun()
+                if st.button("⚙️\nDashboard", key="m1", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Dashboard"
+                    st.rerun()
+                if st.button("🏭\nMagazyn", key="m5", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Magazyn"
+                    st.rerun()
             with c2:
-                if st.button("➕\nNowy Wpis", key="m2", use_container_width=True): st.session_state["aktywny_modul"] = "Nowy Wpis"; st.rerun()
-                if st.button("📂\nArchiwum", key="m6", use_container_width=True): st.session_state["aktywny_modul"] = "Archiwum"; st.rerun()
+                if st.button("➕\nNowy Wpis", key="m2", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Nowy Wpis"
+                    st.rerun()
+                if st.button("📂\nArchiwum", key="m6", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Archiwum"
+                    st.rerun()
             with c3:
-                if st.button("📍\nMapa i Trasy", key="m3", use_container_width=True): st.session_state["aktywny_modul"] = "Mapa Routing"; st.rerun()
-                if st.button("🛠️\nKonsola", key="m7", use_container_width=True): st.session_state["aktywny_modul"] = "Konsola Admin."; st.rerun()
+                if st.button("📍\nMapa i Trasy", key="m3", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Mapa Routing"
+                    st.rerun()
+                if st.button("🛠️\nKonsola", key="m7", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Konsola Admin."
+                    st.rerun()
             with c4:
-                if st.button("🗓️\nKalendarz", key="m4", use_container_width=True): st.session_state["aktywny_modul"] = "Kalendarz"; st.rerun()
-                if st.button("👥\nPersonel", key="m8", use_container_width=True): st.session_state["aktywny_modul"] = "Użytkownicy"; st.rerun()
+                if st.button("🗓️\nKalendarz", key="m4", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Kalendarz"
+                    st.rerun()
+                if st.button("👥\nPersonel", key="m8", use_container_width=True): 
+                    st.session_state["aktywny_modul"] = "Użytkownicy"
+                    st.rerun()
             
-            # Subtelne ustawienia na dole
+            # Konfiguracja wizualna na dole ekranu głównego
             with st.expander("🎨 Ustawienia Interfejsu"):
                 st.slider("Przezroczystość szkła", 0.0, 1.0, step=0.05, key="bg_opacity")
                 st.slider("Rozmycie tła", 0, 20, step=1, key="bg_blur")
                 if st.button("💾 Zapisz wygląd", use_container_width=True):
                     database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
-                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
-                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                    ts = str(int(time.time() * 1000))
+                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"s_op_{ts}")
+                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"s_bl_{ts}")
                     st.toast("Zapisano wizualizację!")
 
         else:
