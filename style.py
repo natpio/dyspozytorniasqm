@@ -2,27 +2,25 @@ import streamlit as st
 import base64
 
 def get_base64_of_bin_file(bin_file):
-    """Odczytuje plik graficzny z dysku i zamienia go na format Base64 dla CSS."""
     try:
-        with open(bin_file, 'rb') as f:
-            data = f.read()
+        with open(bin_file, 'rb') as f: data = f.read()
         return base64.b64encode(data).decode()
     except FileNotFoundError:
         return None
 
 def zastosuj_style(opacity, blur):
-    """Główna funkcja wstrzykująca Premium CSS i obsługująca suwaki przez zmienne."""
     bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
-    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT - NAPRAWIONE */
-    [data-testid="stHeader"] { background-color: transparent !important; } /* Pasek jest przezroczysty, ale przycisk menu powraca! */
+    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT (Całkowite usunięcie sidebara) */
+    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="stSidebar"] { display: none !important; }
+    header { visibility: hidden !important; height: 0px !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
-    .stDeployButton { display: none !important; }
 
-    /* TŁO I MGŁA NA GŁÓWNYM EKRANIE */
+    /* GLOBALNE TŁO GLASSMORPHISM */
     .stApp {
         background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
         background-size: cover !important;
@@ -31,117 +29,68 @@ def zastosuj_style(opacity, blur):
     }
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: rgba(247, 249, 252, OPACITY_PLACEHOLDER) !important; 
+        background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; 
         backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important; 
         -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important;
         z-index: 0 !important; pointer-events: none !important; 
     }
 
+    /* KONTENER LOGOWANIA */
+    .login-container {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.95)) !important;
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 28px !important;
+        padding: 40px !important;
+        box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9) !important;
+        margin-top: 10vh;
+    }
+
     /* ========================================= */
-    /* 🔥 BEZKOMPROMISOWY CIEMNY SIDEBAR 🔥      */
+    /* POTĘŻNE KAFELKI MENU (Dashboard)          */
     /* ========================================= */
-    [data-testid="stSidebar"], section[data-testid="stSidebar"] {
-        background-color: #0f172a !important; 
-        background-image: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-        border-right: 1px solid rgba(255,255,255,0.05) !important;
-    }
-    
-    /* Blokada przezroczystości wewnętrznego kontenera Streamlit */
-    [data-testid="stSidebar"] > div:first-child {
-        background-color: transparent !important;
-        background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) !important;
-        background-size: 16px 16px !important;
-    }
-    
-    /* Wymuszenie białego koloru WSZYSTKICH tekstów w pasku bocznym */
-    [data-testid="stSidebar"] * { 
-        color: #f8fafc !important; 
-    }
-
-    .sidebar-header { 
-        background: -webkit-linear-gradient(45deg, #60a5fa, #f8fafc);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-size: 1.6rem !important; font-weight: 900 !important; padding: 1.5rem 1rem 0.5rem 1rem !important;
-    }
-    
-    .sidebar-subheader { 
-        font-size: 0.85rem !important; color: #94a3b8 !important; 
-        padding: 0 1rem 1.2rem 1rem !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; 
-    }
-
-    /* 🔥 INTERAKTYWNE MENU RADIOWE (USUNIĘCIE KROPEK STREAMLIT) 🔥 */
-    [data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
-
-    div[role="radiogroup"] > label {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px !important; padding: 14px 18px !important; margin: 6px 1rem !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-    }
-    div[role="radiogroup"] > label:hover { 
-        background: rgba(255, 255, 255, 0.08) !important; 
-        transform: translateX(8px) !important;
-    }
-    div[role="radiogroup"] > label[data-checked="true"] { 
-        background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)) !important;
-        border-left: 4px solid #3b82f6 !important; transform: translateX(8px) !important;
-    }
-    div[role="radiogroup"] > label p { 
-        font-size: 1rem !important; font-weight: 500 !important; margin-left: 5px !important; 
-    }
-
-    /* SUWAKI USTAWIEŃ UI W PASKU */
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
-        background-color: rgba(15, 23, 42, 0.5) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 12px !important;
-        margin: 1rem !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary { background-color: transparent !important; }
-
-    /* 🔥 ULTRA MOCNY SELEKTOR DLA PRZYCISKU WYLOGUJ 🔥 */
-    section[data-testid="stSidebar"] .stButton > button {
-        background-color: #ef4444 !important;
-        background-image: none !important;
-        border: 1px solid #ef4444 !important;
-        border-radius: 12px !important;
-        padding: 12px !important;
-        margin-top: 1.5rem !important;
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2) !important;
-    }
-    /* Gwarantuje, że tekst wewnątrz przycisku będzie BIAŁY */
-    section[data-testid="stSidebar"] .stButton > button p, 
-    section[data-testid="stSidebar"] .stButton > button div, 
-    section[data-testid="stSidebar"] .stButton > button span {
-        color: #ffffff !important;
+    div[data-testid="stButton"] button {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 24px !important;
+        padding: 30px 15px !important;
+        height: auto !important;
+        color: #f8fafc !important;
+        font-size: 1.2rem !important;
         font-weight: 800 !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        white-space: pre-wrap !important; /* Pozwala na użycie znaku nowej linii w przycisku */
     }
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #dc2626 !important;
-        border: 1px solid #dc2626 !important;
+    
+    div[data-testid="stButton"] button:hover {
+        transform: translateY(-5px) scale(1.02) !important;
+        background: linear-gradient(145deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.1)) !important;
+        border-color: rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 0 20px 40px rgba(56, 189, 248, 0.2) !important;
+        color: #ffffff !important;
+    }
+    
+    /* Mniejszy przycisk wylogowania na top-barze */
+    div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button {
+        padding: 5px !important; border-radius: 12px !important; font-size: 1rem !important;
+        background: rgba(239, 68, 68, 0.2) !important; border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+    div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button:hover {
+        background: rgba(239, 68, 68, 0.8) !important;
     }
 
-    /* ========================================= */
-    /* KARTY DASHBOARDU                          */
-    /* ========================================= */
+    /* KARTY DASHBOARDU (Z ui_lukasz) */
     .card-container { 
-        background: white !important; border-radius: 15px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.05) !important; 
-        padding: 20px !important; margin-bottom: 15px !important; border: 1px solid #e2e8f0 !important; 
+        background: rgba(30, 41, 59, 0.7) !important; backdrop-filter: blur(10px);
+        border-radius: 20px !important; box-shadow: 0 8px 30px rgba(0,0,0,0.3) !important; 
+        padding: 20px !important; margin-bottom: 15px !important; border: 1px solid rgba(255,255,255,0.08) !important; 
     }
-    .card-value { font-size: 2.4rem !important; font-weight: bold !important; color: #0f172a !important; }
-
-    /* 🌙 DARK MODE (Ciemny motyw przeglądarki) */
-    @media (prefers-color-scheme: dark) {
-        .stApp::before { background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; }
-        .card-container {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)) !important;
-            border: 1px solid #334155 !important;
-        }
-        .card-value, .dashboard-title { color: #f8fafc !important; }
-    }
+    .card-value { font-size: 2.4rem !important; font-weight: 900 !important; color: #f8fafc !important; }
+    .dashboard-title { color: #f8fafc !important; }
     """
 
-    # Dynamiczna podmiana zmiennych
     local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
     local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(opacity))
     local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(blur))
