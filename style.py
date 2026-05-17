@@ -74,44 +74,80 @@ def zastosuj_style(opacity, blur):
         border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 10px; margin-bottom: 20px;
     }
 
-    /* SZKLANE PRZYCISKI RADARU NA HUDZIE */
-    .stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { display: none !important; }
-    .stRadio div[role="radiogroup"] { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-    .stRadio div[role="radiogroup"] label { width: 100% !important; margin: 0 !important; cursor: pointer !important; }
+    /* ========================================= */
+    /* 🔥 NAPRAWA MENU (RADIO) - KONTRAST I WYGLĄD */
+    /* ========================================= */
+    /* Całkowite ukrycie szarych kółek od st.radio */
+    .stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { 
+        display: none !important; 
+    }
     
+    .stRadio div[role="radiogroup"] { 
+        display: flex; flex-direction: column; gap: 8px; width: 100%; 
+    }
+    .stRadio div[role="radiogroup"] label { 
+        width: 100% !important; margin: 0 !important; cursor: pointer !important; 
+    }
+    
+    /* Główne tło i domyślny wygląd przycisku w menu */
     .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child {
-        width: 100% !important; display: flex !important; align-items: center !important;
-        padding: 14px 20px !important; background: rgba(255, 255, 255, 0.03) !important;
-        border-radius: 14px !important; color: #cbd5e1 !important; font-size: 1.05rem !important;
-        font-weight: bold !important; border: 1px solid rgba(255,255,255,0.04) !important; transition: all 0.2s ease !important;
+        width: 100% !important; 
+        display: flex !important; 
+        align-items: center !important;
+        padding: 12px 18px !important; 
+        background: rgba(255, 255, 255, 0.08) !important; /* Wyraźniejsze tło dla nieaktywnych */
+        border-radius: 12px !important; 
+        color: #f8fafc !important; /* BIAŁY TEKST dla mocnego kontrastu */
+        font-size: 1.05rem !important;
+        font-weight: 600 !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important; 
+        transition: all 0.2s ease !important;
     }
-    .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child p { text-align: left !important; margin: 0 !important; }
     
-    .stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
-        background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; transform: translateX(4px);
+    /* Wymuszenie białego koloru na tekście wewnątrz Streamlita */
+    .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child p { 
+        color: inherit !important; 
+        font-weight: inherit !important;
+        text-align: left !important; 
+        margin: 0 !important; 
     }
+    
+    /* Hover (Najazd myszką) */
+    .stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
+        background: rgba(255, 255, 255, 0.15) !important; 
+        color: #ffffff !important; 
+        transform: translateX(4px);
+    }
+    
+    /* Zaznaczony (Aktywny moduł) */
     .stRadio div[role="radiogroup"] label:has(input:checked) div[data-baseweb="radio"] > div:last-child {
-        background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.02)) !important;
-        border: 1px solid rgba(56, 189, 248, 0.5) !important; color: #38bdf8 !important; border-left: 5px solid #38bdf8 !important;
+        background: linear-gradient(90deg, rgba(56, 189, 248, 0.25), rgba(56, 189, 248, 0.05)) !important;
+        border: 1px solid rgba(56, 189, 248, 0.5) !important; 
+        color: #38bdf8 !important; 
+        border-left: 5px solid #38bdf8 !important;
+        font-weight: 800 !important;
     }
 
-    /* STRUKTURA PANELU HUD (LEWA STRONA) */
+    /* ========================================= */
+    /* STRUKTURA PANELU HUD (LEWA STRONA)        */
+    /* ========================================= */
     .hud-wrapper {
         background: rgba(15, 23, 42, 0.4) !important; backdrop-filter: blur(15px) !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important; border-radius: 24px !important;
         padding: 25px !important; box-shadow: 0 20px 45px rgba(0,0,0,0.4) !important;
     }
+    /* Jaśniejsze nagłówki sekcji w lewym panelu */
     .hud-section-title {
-        font-size: 0.8rem; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-bottom: 15px;
+        font-size: 0.8rem; font-weight: 800; color: #cbd5e1 !important; letter-spacing: 1px; margin-bottom: 15px; text-transform: uppercase;
     }
 
     /* KARTY METRYK W PANELU HUD */
     .hud-metric-container { display: flex; gap: 10px; justify-content: space-between; width: 100%; }
     .hud-metric-card {
-        background: rgba(255, 255, 255, 0.02) !important; border: 1px solid rgba(255,255,255,0.05) !important;
+        background: rgba(255, 255, 255, 0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important;
         border-radius: 14px !important; padding: 12px 8px !important; text-align: center; flex: 1;
     }
-    .hud-metric-card h5 { margin: 0 0 5px 0 !important; color: #64748b !important; font-size: 0.65rem !important; font-weight: 800; }
+    .hud-metric-card h5 { margin: 0 0 5px 0 !important; color: #94a3b8 !important; font-size: 0.65rem !important; font-weight: 800; }
     .hud-metric-card h4 { margin: 0 !important; color: #f8fafc !important; font-size: 1.6rem !important; font-weight: 900; }
     
     .hud-metric-card.border-blue { border-left: 4px solid #3b82f6 !important; }
