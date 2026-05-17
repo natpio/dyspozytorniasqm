@@ -118,6 +118,10 @@ if st.session_state["zalogowany"] is None:
                     if dane_konta and str(dane_konta["PIN"]) == pin:
                         st.session_state["zalogowany"] = wybrane_konto
                         st.session_state["rola"] = str(dane_konta.get("Rola", "Admin"))
+                        
+                        # ZDEJMUJEMY BLOKADĘ po poprawnym, ręcznym zalogowaniu
+                        st.session_state["blokada_autologowania"] = False
+                        
                         ts = str(int(time.time() * 1000))
                         cookie_manager.set("zalogowany", wybrane_konto, expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts}")
                         wczytaj_ustawienia(wybrane_konto)
@@ -146,9 +150,23 @@ else:
     with col_logout:
         if st.button("⏻", key="btn_logout", help="Bezpieczne wylogowanie z systemu", use_container_width=True):
             ts = str(int(time.time() * 1000))
-            try: cookie_manager.delete("zalogowany", key=f"del_log_{ts}")
+            try: 
+                # Nadpisujemy ciasteczko pustą wartością ze wsteczną datą ważności
+                cookie_manager.set("zalogowany", "", expires_at=datetime.datetime.now() - datetime.timedelta(days=1), key=f"del_log_{ts}")
+                cookie_manager.delete("zalogowany", key=f"del_log2_{ts}")
             except: pass
-            st.session_state.clear()
+            
+            # Bezpieczne czyszczenie stanów konta bez niszczenia flagi blokady autologowania
+            st.session_state["zalogowany"] = None
+            st.session_state["rola"] = None
+            st.session_state["wybrane_konto"] = None
+            st.session_state["ustawienia_wczytane"] = False
+            st.session_state["aktywny_modul"] = "Control Tower"
+            
+            # AKTYWACJA BLOKADY - Zapobiega ponownemu przechwyceniu sesji przez stare ciasteczko
+            st.session_state["blokada_autologowania"] = True
+            
+            time.sleep(0.3)
             st.rerun()
 
     st.markdown("<div class='system-divider'></div>", unsafe_allow_html=True)
@@ -178,7 +196,6 @@ else:
             st.markdown('<div class="hud-wrapper">', unsafe_allow_html=True)
             st.markdown('<div class="hud-section-title">📊 TELEMETRIA FLOTY</div>', unsafe_allow_html=True)
             
-            # Mini-metryki wtopione w szklany panel
             st.markdown(f"""
             <div class="hud-metric-container">
                 <div class="hud-metric-card border-blue"><h5>ZLECENIA DZIŚ</h5><h4>{total_tasks}</h4></div>
@@ -189,7 +206,6 @@ else:
             
             st.markdown('<div class="hud-section-title" style="margin-top:25px;">🛠️ SYSTEM INTERFEJSÓW</div>', unsafe_allow_html=True)
             
-            # Taktyczne menu wyboru modułu operacyjnego
             opcje_modulow = [
                 "📡 Widok Radaru (Control Tower)",
                 "📊 Centrum Statystyk (Dashboard)",
@@ -201,7 +217,6 @@ else:
                 "👥 Zarządzanie Personelem"
             ]
             
-            # Mapowanie wyboru na uproszczone nazwy modułów
             mapowanie_nazw = {
                 "📡 Widok Radaru (Control Tower)": "Control Tower",
                 "📊 Centrum Statystyk (Dashboard)": "Dashboard",
@@ -218,7 +233,6 @@ else:
             wybor_hud = st.radio("Nawigacja Taktyczna", opcje_modulow, index=wyszukaj_indeks, label_visibility="collapsed")
             st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
             
-            # Suwaki środowiskowe wtopione na dnie HUDa
             with st.expander("🎨 Parametry wizualne powłoki"):
                 st.slider("Przezroczystość", 0.0, 1.0, step=0.05, key="bg_opacity")
                 st.slider("Współczynnik Blur", 0, 20, step=1, key="bg_blur")
@@ -236,7 +250,6 @@ else:
             st.markdown('<div class="viewport-wrapper">', unsafe_allow_html=True)
             
             if st.session_state["aktywny_modul"] == "Control Tower":
-                # MODUŁ PODSTAWOWY: Pełnowymiarowa mapa drogowa w centrum radaru
                 ui_mapa.pokaz_mape()
             elif st.session_state["aktywny_modul"] == "Dashboard": 
                 ui_lukasz.pokaz_dashboard()
