@@ -11,13 +11,13 @@ def get_base64_of_bin_file(bin_file):
         return None
 
 def zastosuj_style(opacity, blur):
-    """Główna funkcja wstrzykująca Premium CSS dla interfejsu SQM OS (bez paska bocznego)."""
+    """Główna funkcja wstrzykująca Premium CSS dla pełnoekranowej architektury Control Tower."""
     bg_img_base64 = get_base64_of_bin_file('tlolukasz2.png')
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
     /* ========================================= */
-    /* 🚫 CAŁKOWITE USUNIĘCIE ELEMENTÓW SYSTEMU   */
+    /* 🚫 INTEGRALNE OCZYSZCZANIE INTERFEJSU     */
     /* ========================================= */
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="stSidebar"] { display: none !important; }
@@ -27,9 +27,17 @@ def zastosuj_style(opacity, blur):
     footer { display: none !important; }
     #MainMenu { display: none !important; }
     .stDeployButton { display: none !important; }
+    
+    /* Wycięcie standardowych marginesów bocznych Streamlita dla pełnego ekranu OS */
+    .block-container {
+        padding-top: 15px !important;
+        padding-bottom: 10px !important;
+        padding-left: 25px !important;
+        padding-right: 25px !important;
+    }
 
     /* ========================================= */
-    /* 🌌 INTEGRACJA TŁA I POWŁOKA GLASSMORPHISM */
+    /* 🌌 INTEGRACJA CYFROWEGO TŁA OS             */
     /* ========================================= */
     .stApp {
         background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
@@ -39,116 +47,110 @@ def zastosuj_style(opacity, blur):
     }
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; 
+        background-color: rgba(10, 15, 30, OPACITY_PLACEHOLDER) !important; 
         backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important; 
         -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important;
         z-index: 0 !important; pointer-events: none !important; 
     }
 
     /* ========================================= */
-    /* 🔐 KONTENER EKRANU LOGOWANIA             */
+    /* 📟 SPERSONALIZOWANE SYSTEMOWE MENU HUD     */
     /* ========================================= */
-    .login-container {
-        background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.95)) !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 28px !important;
-        padding: 40px !important;
-        box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9) !important;
-        margin-top: 10vh;
+    .system-brand {
+        font-size: 1.4rem; font-weight: 900; color: #f8fafc; letter-spacing: -0.5px; padding-top: 5px;
+    }
+    .system-status-pill {
+        background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
+        color: #38bdf8; font-size: 0.7rem; padding: 2px 8px; border-radius: 8px; vertical-align: middle; margin-left: 5px;
+    }
+    .system-clock {
+        text-align: center; color: #64748b; font-family: monospace; font-size: 1.1rem; padding-top: 8px; font-weight: bold;
+    }
+    .system-user-tag {
+        text-align: right; color: #94a3b8; padding-top: 8px; font-size: 1rem;
+    }
+    .system-divider {
+        border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 10px; margin-bottom: 20px;
     }
 
-    /* ========================================= */
-    /* 🔥 TRÓJWYMIAROWE KAFELKI Z DANYMI LIVE   */
-    /* ========================================= */
-    div[data-testid="stButton"] button {
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-radius: 24px !important;
-        padding: 35px 20px !important;
-        height: 150px !important;
-        color: #f8fafc !important;
-        font-size: 1.3rem !important;
-        font-weight: 900 !important;
-        letter-spacing: 0.5px !important;
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3) !important;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        white-space: pre-wrap !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        line-height: 1.5 !important;
-        text-align: center !important;
-    }
+    /* SZKLANE PRZYCISKI RADARU NA HUDZIE */
+    .stRadio div[role="radiogroup"] div[data-baseweb="radio"] > div:first-child { display: none !important; }
+    .stRadio div[role="radiogroup"] { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .stRadio div[role="radiogroup"] label { width: 100% !important; margin: 0 !important; cursor: pointer !important; }
     
-    /* Efekt poświaty oraz uniesienia kafelka przy najechaniu myszą */
-    div[data-testid="stButton"] button:hover {
-        transform: translateY(-6px) scale(1.02) !important;
-        background: linear-gradient(145deg, rgba(56, 189, 248, 0.25), rgba(59, 130, 246, 0.15)) !important;
-        border-color: rgba(56, 189, 248, 0.5) !important;
-        box-shadow: 0 20px 40px rgba(56, 189, 248, 0.3) !important;
-        color: #ffffff !important;
+    .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child {
+        width: 100% !important; display: flex !important; align-items: center !important;
+        padding: 14px 20px !important; background: rgba(255, 255, 255, 0.03) !important;
+        border-radius: 14px !important; color: #cbd5e1 !important; font-size: 1.05rem !important;
+        font-weight: bold !important; border: 1px solid rgba(255,255,255,0.04) !important; transition: all 0.2s ease !important;
+    }
+    .stRadio div[role="radiogroup"] label div[data-baseweb="radio"] > div:last-child p { text-align: left !important; margin: 0 !important; }
+    
+    .stRadio div[role="radiogroup"] label:hover div[data-baseweb="radio"] > div:last-child {
+        background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; transform: translateX(4px);
+    }
+    .stRadio div[role="radiogroup"] label:has(input:checked) div[data-baseweb="radio"] > div:last-child {
+        background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.02)) !important;
+        border: 1px solid rgba(56, 189, 248, 0.5) !important; color: #38bdf8 !important; border-left: 5px solid #38bdf8 !important;
     }
 
-    /* Odpowiedź kinetyczna interfejsu w momencie kliknięcia */
-    div[data-testid="stButton"] button:active {
-        transform: translateY(-2px) scale(0.99) !important;
+    /* STRUKTURA PANELU HUD (LEWA STRONA) */
+    .hud-wrapper {
+        background: rgba(15, 23, 42, 0.4) !important; backdrop-filter: blur(15px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important; border-radius: 24px !important;
+        padding: 25px !important; box-shadow: 0 20px 45px rgba(0,0,0,0.4) !important;
     }
+    .hud-section-title {
+        font-size: 0.8rem; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-bottom: 15px;
+    }
+
+    /* KARTY METRYK W PANELU HUD */
+    .hud-metric-container { display: flex; gap: 10px; justify-content: space-between; width: 100%; }
+    .hud-metric-card {
+        background: rgba(255, 255, 255, 0.02) !important; border: 1px solid rgba(255,255,255,0.05) !important;
+        border-radius: 14px !important; padding: 12px 8px !important; text-align: center; flex: 1;
+    }
+    .hud-metric-card h5 { margin: 0 0 5px 0 !important; color: #64748b !important; font-size: 0.65rem !important; font-weight: 800; }
+    .hud-metric-card h4 { margin: 0 !important; color: #f8fafc !important; font-size: 1.6rem !important; font-weight: 900; }
     
-    /* ⚡ SPECJALNY SELEKTOR: PRZYCISK WYLOGOWANIA (GÓRNY PASEK) ⚡ */
+    .hud-metric-card.border-blue { border-left: 4px solid #3b82f6 !important; }
+    .hud-metric-card.border-green { border-left: 4px solid #10b981 !important; }
+    .hud-metric-card.border-orange { border-left: 4px solid #f59e0b !important; }
+
+    /* STRUKTURA VIEWPORTU (PRAWA STRONA - MODUŁY) */
+    .viewport-wrapper {
+        background: rgba(15, 23, 42, 0.2) !important; backdrop-filter: blur(5px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.04) !important; border-radius: 24px !important;
+        padding: 20px !important; box-shadow: inset 0 0 40px rgba(0,0,0,0.2) !important;
+    }
+
+    /* SPECJALISTYCZNY WYLOGUJ (TOP-BAR) */
     div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button {
-        padding: 10px !important; 
-        border-radius: 14px !important; 
-        font-size: 1.1rem !important;
-        height: auto !important;
-        background: rgba(239, 68, 68, 0.15) !important; 
-        border: 1px solid rgba(239, 68, 68, 0.4) !important;
-        box-shadow: none !important;
+        padding: 6px !important; border-radius: 12px !important; font-size: 1.1rem !important; height: auto !important;
+        background: rgba(239, 68, 68, 0.15) !important; border: 1px solid rgba(239, 68, 68, 0.4) !important; color: #ef4444 !important;
     }
     div[data-testid="column"]:nth-child(4) div[data-testid="stButton"] button:hover {
-        background: rgba(239, 68, 68, 0.8) !important;
-        border-color: #ef4444 !important;
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
-        transform: translateY(-2px) !important;
+        background: #ef4444 !important; color: white !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important; transform: translateY(-1px);
     }
 
-    /* ========================================= */
-    /* 📊 MODUŁY I KARTY STATYSTYK INTERNEKO     */
-    /* ========================================= */
+    /* KARTY WEWNĘTRZNE (DLA MODUŁÓW) */
     .card-container { 
-        background: rgba(30, 41, 59, 0.6) !important; 
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-radius: 20px !important; 
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3) !important; 
-        padding: 22px !important; 
-        margin-bottom: 15px !important; 
-        border: 1px solid rgba(255, 255, 255, 0.08) !important; 
+        background: rgba(22, 30, 49, 0.75) !important; backdrop-filter: blur(10px) !important;
+        border-radius: 16px !important; border: 1px solid rgba(255, 255, 255, 0.06) !important; padding: 20px !important; margin-bottom: 15px !important;
     }
-    .card-value { font-size: 2.6rem !important; font-weight: 900 !important; color: #f8fafc !important; }
+    .card-value { font-size: 2.4rem !important; font-weight: 900 !important; color: #f8fafc !important; }
     .dashboard-title { color: #f8fafc !important; font-weight: 800 !important; }
     .dashboard-subheader { color: #94a3b8 !important; }
 
-    .card-container.wszystkie-zlecenia { border-left: 6px solid #3b82f6 !important; }
-    .card-container.nowe { border-left: 6px solid #f59e0b !important; }
-    .card-container.w-trakcie { border-left: 6px solid #10b981 !important; }
-    .card-container.zakonczone { border-left: 6px solid #8b5cf6 !important; }
-
-    /* Wygładzenie i dopasowanie kontenerów kart zakładek (Tabs) */
+    /* WZORCOWE DOSTOSOWANIE FORMULARZY I ZAKŁADEK */
     .stTabs [data-testid="stVerticalBlock"] {
-        background: rgba(15, 23, 42, 0.35) !important;
-        padding: 24px !important;
-        border-radius: 20px !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(8px) !important;
+        background: rgba(15, 23, 42, 0.4) !important; padding: 20px !important; border-radius: 16px !important; border: 1px solid rgba(255, 255, 255, 0.04) !important;
     }
+    
+    /* MODALNE OKNA INTERFEJSU MAPY LUB KALENDARZA */
+    iframe { border-radius: 16px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important; }
     """
 
-    # Dynamiczne podmienianie wartości konfiguracyjnych przekazanych z silnika app.py
     local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
     local_css_string = local_css_string.replace("OPACITY_PLACEHOLDER", str(opacity))
     local_css_string = local_css_string.replace("BLUR_PLACEHOLDER", str(blur))
