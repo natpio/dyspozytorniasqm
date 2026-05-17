@@ -211,7 +211,7 @@ else:
                 "🛠️ Konsola Szybkiej Edycji": "Konsola Admin.",
                 "📂 Archiwum Cyfrowe Plików": "Archiwum",
                 "👥 Zarządzanie Personelem": "Użytkownicy"
-            ]
+            }
             
             wyszukaj_indeks = list(mapowanie_nazw.values()).index(st.session_state["aktywny_modul"]) if st.session_state["aktywny_modul"] in mapowanie_nazw.values() else 0
             
