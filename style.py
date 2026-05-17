@@ -16,13 +16,17 @@ def zastosuj_style(opacity, blur):
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
-    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
+    /* ========================================= */
+    /* 🚫 UKRYWANIE ELEMENTÓW SYSTEMOWYCH        */
+    /* ========================================= */
     [data-testid="stHeader"] { background-color: transparent !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
     .stDeployButton { display: none !important; }
 
-    /* TŁO I MGŁA NA GŁÓWNYM EKRANIE */
+    /* ========================================= */
+    /* 🌌 TŁO I MGŁA NA GŁÓWNYM EKRANIE         */
+    /* ========================================= */
     .stApp {
         background-image: url("BACKGROUND_URL_PLACEHOLDER") !important;
         background-size: cover !important;
@@ -40,7 +44,7 @@ def zastosuj_style(opacity, blur):
     }
 
     /* ========================================= */
-    /* 🔥 NAPRAWA CZYTELNOŚCI FORMULARZY I TEKSTÓW */
+    /* 🔥 NAPRAWA CZYTELNOŚCI FORMULARZY         */
     /* ========================================= */
     
     /* Wymuszenie jasnych etykiet we WSZYSTKICH modułach (Data, Selectbox, Input) */
@@ -55,6 +59,13 @@ def zastosuj_style(opacity, blur):
         font-weight: 600 !important;
         font-size: 0.95rem !important;
         letter-spacing: 0.3px !important;
+    }
+
+    /* Wymuszenie jasnego tekstu w samych polach wpisywania (wewnątrz inputów) */
+    div[data-baseweb="input"] input,
+    div[data-baseweb="select"] div,
+    div[data-baseweb="textarea"] textarea {
+        color: #f8fafc !important;
     }
 
     /* Wyodrębnienie bloków formularzy szkłem */
@@ -103,7 +114,9 @@ def zastosuj_style(opacity, blur):
         padding: 0 1rem 1.2rem 1rem !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; 
     }
 
-    /* INTERAKTYWNE MENU RADIOWE */
+    /* ========================================= */
+    /* INTERAKTYWNE MENU RADIOWE                 */
+    /* ========================================= */
     [data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
 
     div[role="radiogroup"] > label {
