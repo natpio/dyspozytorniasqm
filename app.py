@@ -12,6 +12,7 @@ import ui_kalendarz
 import ui_uzytkownicy
 import database
 import style 
+import data_processing # <--- Używamy nowego, szybkiego silnika do statystyk HUD
 
 # --- 1. KONFIGURACJA STRONY (Maksymalne wykorzystanie przestrzeni) ---
 st.set_page_config(layout="wide", page_title="SQM CONTROL TOWER OS", page_icon="📍", initial_sidebar_state="collapsed")
@@ -169,18 +170,12 @@ else:
     if rola == "Admin":
         st_autorefresh(interval=60000, key="auto_ref_admin")
         
-        # --- AGREGACJA METRYK OPERACYJNYCH DLA PANELU HUD ---
-        dane_baza = database.pobierz_wszystkie_dane()
-        df_baza = pd.DataFrame(dane_baza) if dane_baza else pd.DataFrame()
-        dzis_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        # --- AGREGACJA METRYK OPERACYJNYCH DLA PANELU HUD (ZOPTYMALIZOWANA) ---
+        df_dzis = data_processing.pobierz_dane_na_dzien()
         
-        if not df_baza.empty and 'Data' in df_baza.columns:
-            df_dzis = df_baza[df_baza['Data'] == dzis_str]
-            total_tasks = len(df_dzis)
-            in_transit = len(df_dzis[df_dzis['Status'] == 'W drodze']) if 'Status' in df_dzis.columns else 0
-            pending_warehouse = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if 'Status' in df_dzis.columns else 0
-        else:
-            total_tasks, in_transit, pending_warehouse = 0, 0, 0
+        total_tasks = len(df_dzis)
+        in_transit = len(df_dzis[df_dzis['Status'] == 'W drodze']) if not df_dzis.empty else 0
+        pending_warehouse = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if not df_dzis.empty else 0
 
         # BUDOWA DWUKOLUMNOWEGO KOKPITU CONTROL TOWER
         col_hud, col_viewport = st.columns([3, 7])
@@ -238,7 +233,7 @@ else:
             )
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                # CALLBACKI DO NATYCHMIASTOWEJ SYNCHRONIZACJI WLOCIE
+                # CALLBACKI DO NATYCHMIASTOWEJ SYNCHRONIZACJI W LOCIE
                 def aktualizuj_opacity():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
                 def aktualizuj_blur():
@@ -259,6 +254,7 @@ else:
             
         # --- PRAWY PANEL: MATRYCA INTERFEJSU (VIEWPORT) ---
         with col_viewport:
+            # Wstrzykujemy bezpośrednio wybraną funkcję widoku (Brak wadliwego kontenera HTML!)
             if st.session_state["aktywny_modul"] == "Control Tower":
                 ui_mapa.pokaz_mape()
             elif st.session_state["aktywny_modul"] == "Dashboard": 
