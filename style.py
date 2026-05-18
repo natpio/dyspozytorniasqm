@@ -1,6 +1,7 @@
 import streamlit as st
 import base64
 
+@st.cache_data
 def get_base64_of_bin_file(bin_file):
     """Odczytuje plik graficzny z dysku i zamienia go na format Base64 dla CSS."""
     try:
