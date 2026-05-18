@@ -117,8 +117,6 @@ if st.session_state["zalogowany"] is None:
                     if dane_konta and str(dane_konta["PIN"]) == pin:
                         st.session_state["zalogowany"] = wybrane_konto
                         st.session_state["rola"] = str(dane_konta.get("Rola", "Admin"))
-                        
-                        # ZDEJMUJEMY BLOKADĘ po poprawnym, ręcznym zalogowaniu
                         st.session_state["blokada_autologowania"] = False
                         
                         ts = str(int(time.time() * 1000))
@@ -150,24 +148,18 @@ else:
         if st.button("⏻", key="btn_logout", help="Bezpieczne wylogowanie z systemu", use_container_width=True):
             ts = str(int(time.time() * 1000))
             try: 
-                # Nadpisujemy ciasteczko pustą wartością ze wsteczną datą ważności
                 cookie_manager.set("zalogowany", "", expires_at=datetime.datetime.now() - datetime.timedelta(days=1), key=f"del_log_{ts}")
                 cookie_manager.delete("zalogowany", key=f"del_log2_{ts}")
             except: pass
             
-            # Bezpieczne czyszczenie stanów konta bez niszczenia flagi blokady autologowania
             st.session_state["zalogowany"] = None
             st.session_state["rola"] = None
             st.session_state["wybrane_konto"] = None
             st.session_state["ustawienia_wczytane"] = False
             st.session_state["aktywny_modul"] = "Control Tower"
-            
-            # AKTYWACJA BLOKADY - Zapobiega ponownemu przechwyceniu sesji przez stare ciasteczko
             st.session_state["blokada_autologowania"] = True
             
-            # Czyszczenie pamięci menu bocznego przy wylogowaniu
             if "hud_radio_key" in st.session_state: del st.session_state["hud_radio_key"]
-            
             time.sleep(0.3)
             st.rerun()
 
@@ -232,12 +224,10 @@ else:
             
             wyszukaj_indeks = list(mapowanie_nazw.values()).index(st.session_state["aktywny_modul"]) if st.session_state["aktywny_modul"] in mapowanie_nazw.values() else 0
             
-            # Bezpieczna funkcja callback nawigacji - gwarantuje nadpisanie stanu przed przeładowaniem viewportu
             def aktualizuj_modul():
                 wybrany_label = st.session_state["hud_radio_key"]
                 st.session_state["aktywny_modul"] = mapowanie_nazw[wybrany_label]
             
-            # Kotwiczenie menu za pomocą klucza i funkcji on_change
             st.radio(
                 "Nawigacja Taktyczna", 
                 opcje_modulow, 
@@ -248,28 +238,13 @@ else:
             )
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                # Definicja bezpiecznych funkcji callback do aktualizacji stanu suwaków
                 def aktualizuj_opacity():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
-                
                 def aktualizuj_blur():
                     st.session_state["bg_blur"] = st.session_state["suwak_blur"]
 
-                # Izolacja suwaków przed resetami w tle za pomocą dedykowanych kluczy (suwak_...)
-                st.slider(
-                    "Przezroczystość", 0.0, 1.0, 
-                    value=float(st.session_state.get("bg_opacity", 0.55)), 
-                    step=0.05, 
-                    key="suwak_opacity", 
-                    on_change=aktualizuj_opacity
-                )
-                st.slider(
-                    "Współczynnik Blur", 0, 20, 
-                    value=int(st.session_state.get("bg_blur", 12)), 
-                    step=1, 
-                    key="suwak_blur", 
-                    on_change=aktualizuj_blur
-                )
+                st.slider("Przezroczystość", 0.0, 1.0, value=float(st.session_state.get("bg_opacity", 0.55)), step=0.05, key="suwak_opacity", on_change=aktualizuj_opacity)
+                st.slider("Współczynnik Blur", 0, 20, value=int(st.session_state.get("bg_blur", 12)), step=1, key="suwak_blur", on_change=aktualizuj_blur)
                 
                 if st.button("💾 Zapamiętaj ustawienia", use_container_width=True):
                     database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
@@ -282,8 +257,7 @@ else:
             
         # --- PRAWY PANEL: MATRYCA INTERFEJSU (VIEWPORT) ---
         with col_viewport:
-            st.markdown('<div class="viewport-wrapper">', unsafe_allow_html=True)
-            
+            # USUNIĘTO WADLIWY KONTENER HTML WRAZ Z KLASĄ VIEWPORT-WRAPPER
             if st.session_state["aktywny_modul"] == "Control Tower":
                 ui_mapa.pokaz_mape()
             elif st.session_state["aktywny_modul"] == "Dashboard": 
@@ -300,8 +274,6 @@ else:
                 ui_lukasz.pokaz_archiwum()
             elif st.session_state["aktywny_modul"] == "Użytkownicy": 
                 ui_uzytkownicy.pokaz_panel_uzytkownikow()
-                
-            st.markdown('</div>', unsafe_allow_html=True)
 
     # --- ROUTING DLA OPERATORÓW POZA PANELEM ADMINA ---
     elif rola == "Kierowca":
