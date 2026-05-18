@@ -165,3 +165,36 @@ def dodaj_nowego_uzytkownika(nowy_wiersz):
     except Exception as e:
         print(f"Błąd dodawania użytkownika: {e}")
         raise e
+
+
+# --- NOWE FUNKCJE: OBSŁUGA SŁOWNIKÓW (FLOTA I DZIAŁY) ---
+
+@st.cache_data(ttl=300) # Aktualizacja co 5 minut
+def pobierz_slowniki():
+    """Pobiera listy rozwijane (auta, działy) z arkusza 'Slowniki'."""
+    try:
+        arkusz = get_worksheet("Slowniki")
+        dane = arkusz.get_all_values()
+        
+        if not dane or len(dane) < 2:
+            return {"Auta": ["Brak danych"], "Działy": ["Rental", "Realizacja"]}
+
+        auta = []
+        dzialy = []
+
+        # Pomijamy wiersz nagłówkowy (dane[0])
+        for wiersz in dane[1:]:
+            if len(wiersz) > 0 and wiersz[0].strip():
+                auta.append(wiersz[0].strip())
+            if len(wiersz) > 1 and wiersz[1].strip():
+                dzialy.append(wiersz[1].strip())
+
+        return {"Auta": auta, "Działy": dzialy}
+        
+    except Exception as e:
+        print(f"Błąd pobierania słowników: {e}")
+        # Bezpieczny fallback w razie błędu lub braku zakładki
+        return {"Auta": ["Błąd wczytywania floty"], "Działy": ["Rental", "Realizacja"]}
+
+def czysc_cache_slownikow():
+    pobierz_slowniki.clear()
