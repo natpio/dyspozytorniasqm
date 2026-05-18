@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import database
-import config  # <--- IMPORT NASZEGO NOWEGO PLIKU Z LISTĄ AUT
+import config  
+import data_processing  # <--- IMPORT NOWEGO SILNIKA PRZETWARZANIA
 
 def style_df(styler):
     """Funkcja pomocnicza do stylizowania tabel dopasowana do ciemnego motywu"""
@@ -22,10 +23,9 @@ def pokaz_dashboard():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📊</span><span class="dashboard-title">Centrum Dowodzenia</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Bieżący podgląd operacji, statusów i wydajności.</div>', unsafe_allow_html=True)
     
-    dane = database.pobierz_wszystkie_dane()
-    df = pd.DataFrame(dane) if dane else pd.DataFrame()
+    # --- POBIERANIE ZOPTYMALIZOWANYCH DANYCH ---
+    df_dzis = data_processing.pobierz_dane_na_dzien()
     dzis = datetime.now().strftime("%Y-%m-%d")
-    df_dzis = df[df['Data'] == dzis] if not df.empty else pd.DataFrame()
     
     # --- KARTY STATYSTYK ---
     wszystkie = len(df_dzis)
@@ -55,15 +55,11 @@ def pokaz_dashboard():
     st.markdown('<br>', unsafe_allow_html=True)
     
     if not df_dzis.empty:
-        df_dzis['Data_sort'] = pd.to_datetime(df_dzis['Data'], format='%Y-%m-%d', errors='coerce')
-        df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
-        
         status_map = {'Nowe': '🔥 Nowe (Czeka)', 'Zaakceptowane': '👍 Zaakceptowane', 'W drodze': '🚜 W drodze', 'Zakończone': '✅ Zakończone', 'Awizacja': '🟠 Awizacja'}
         df_dzis['Status'] = df_dzis['Status'].map(lambda x: status_map.get(x, x))
         
-        # Filtrowanie Magazyn vs Wyjazdy
-        df_magazyn = df_dzis[df_dzis['Typ Akcji'].str.contains("Magazyn")].copy()
-        df_wyjazdy = df_dzis[~df_dzis['Typ Akcji'].str.contains("Magazyn")].copy()
+        # Scentralizowany podział na Magazyn vs Wyjazdy
+        df_magazyn, df_wyjazdy = data_processing.rozdziel_magazyn_wyjazdy(df_dzis)
 
         # 1. TABELA AWIZACJI MAGAZYNOWYCH
         st.markdown(f'<div class="table-header" style="color:#d97706;">🟠 AWIZACJE MAGAZYN: Dowóz / Odbiór - Rental / Realizacja</div>', unsafe_allow_html=True)
@@ -109,7 +105,7 @@ def pokaz_formularz():
                 godzina = st.time_input("Godzina na miejscu")
                 dzial = st.selectbox("Dział", config.DZIALY)
                 typ_akcji = st.selectbox("Typ zadania", ["Dowóz do klienta", "Odbiór od klienta"])
-                auto = st.selectbox("Auto", config.LISTA_AUT)  # <--- TU KORZYSTAMY Z MODUŁU CONFIG
+                auto = st.selectbox("Auto", config.LISTA_AUT)
             with col2:
                 nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
                 klient = st.text_input("Klient (Firma) *", placeholder="Wymagane")
@@ -160,9 +156,8 @@ def pokaz_zarzadzanie():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🛠️</span><span class="dashboard-title">Konsola Administracyjna</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Błyskawiczna zmiana statusów i edycja rekordów (bez przeładowania aplikacji).</div>', unsafe_allow_html=True)
     
-    dane = database.pobierz_wszystkie_dane()
-    if dane:
-        df = pd.DataFrame(dane)
+    df = data_processing.pobierz_czysty_df()
+    if not df.empty:
         df['Data_sort'] = pd.to_datetime(df['Data'], format='%Y-%m-%d', errors='coerce')
         df = df.sort_values(by=['Data_sort', 'Godzina'], ascending=[False, True]).drop(columns=['Data_sort'])
         
@@ -252,24 +247,17 @@ def pokaz_archiwum():
 def pokaz_magazyn():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🏭</span><span class="dashboard-title">Logistyka Magazynowa</span></div>', unsafe_allow_html=True)
     
-    dane = database.pobierz_wszystkie_dane()
-    if not dane:
-        st.info("Brak zadań w bazie.")
-        return
-
-    df = pd.DataFrame(dane)
     wybrana_data = st.date_input("Analizowany dzień:", datetime.now().date())
-    df_dzien = df[df['Data'] == wybrana_data.strftime("%Y-%m-%d")]
+    
+    # --- POBIERANIE ZOPTYMALIZOWANYCH DANYCH NA WYBRANY DZIEŃ ---
+    df_dzien = data_processing.pobierz_dane_na_dzien(wybrana_data)
 
     if df_dzien.empty:
         st.success(f"Brak ruchów sprzętowych na {wybrana_data}.")
         return
 
-    df_dzien['Data_sort'] = pd.to_datetime(df_dzien['Data'], format='%Y-%m-%d', errors='coerce')
-    df_dzien = df_dzien.sort_values(by=['Godzina']).drop(columns=['Data_sort'])
-
-    df_wydania = df_dzien[df_dzien['Typ Akcji'].str.contains("Dowóz|Odbiór przez klienta", case=False)]
-    df_przyjecia = df_dzien[df_dzien['Typ Akcji'].str.contains("Odbiór -|Zwrot przez klienta", case=False)]
+    # Scentralizowany podział na Wydania vs Przyjęcia
+    df_wydania, df_przyjecia = data_processing.rozdziel_wydania_przyjecia(df_dzien)
 
     col1, col2 = st.columns(2)
     with col1:
