@@ -14,25 +14,24 @@ import database
 import style 
 import data_processing
 
-# --- 1. KONFIGURACJA STRONY (Maksymalne wykorzystanie przestrzeni) ---
+# --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(layout="wide", page_title="SQM CONTROL TOWER OS", page_icon="📍", initial_sidebar_state="collapsed")
 
-# --- 2. PERSYSTENCJA SESJI (Ciasteczka) ---
 cookie_manager = stx.CookieManager(key="sqm_control_tower_v90")
 
-# --- 3. INICJALIZACJA STANÓW SYSTEMOWYCH ---
-if "zalogowany" not in st.session_state:
-    st.session_state["zalogowany"] = None
-if "rola" not in st.session_state:
-    st.session_state["rola"] = None
-if "wybrane_konto" not in st.session_state:
-    st.session_state["wybrane_konto"] = None
-if "blokada_autologowania" not in st.session_state:
-    st.session_state["blokada_autologowania"] = False
-if "ustawienia_wczytane" not in st.session_state:
-    st.session_state["ustawienia_wczytane"] = False
-if "aktywny_modul" not in st.session_state:
-    st.session_state["aktywny_modul"] = "Control Tower"
+# Inicjalizacja kluczowych zmiennych systemowych
+if "zalogowany" not in st.session_state: st.session_state["zalogowany"] = None
+if "rola" not in st.session_state: st.session_state["rola"] = None
+if "wybrane_konto" not in st.session_state: st.session_state["wybrane_konto"] = None
+if "blokada_autologowania" not in st.session_state: st.session_state["blokada_autologowania"] = False
+if "ustawienia_wczytane" not in st.session_state: st.session_state["ustawienia_wczytane"] = False
+if "aktywny_modul" not in st.session_state: st.session_state["aktywny_modul"] = "Control Tower"
+
+# Inicjalizacja twardych stanów interfejsu
+if "bg_opacity" not in st.session_state: st.session_state.bg_opacity = 0.75
+if "bg_blur" not in st.session_state: st.session_state.bg_blur = 4
+if "suwak_opacity" not in st.session_state: st.session_state.suwak_opacity = 0.75
+if "suwak_blur" not in st.session_state: st.session_state.suwak_blur = 4
 
 def pobierz_role_z_bazy(login):
     uzytkownicy = database.pobierz_uzytkownikow()
@@ -41,42 +40,24 @@ def pobierz_role_z_bazy(login):
             return str(u.get("Rola", ""))
     return "Admin"
 
-def wczytaj_ustawienia(uzytkownik):
-    # 1. PRIORYTET: Zawsze najpierw ładujemy świeże parametry z Google Sheets
-    try:
-        op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
-        st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op)))
-        st.session_state["bg_blur"] = max(0, min(20, int(bl)))
-        return
-    except: pass
-        
-    # 2. Rezerwa: Jeśli brak sieci, ratujemy się pamięcią podręczną ciasteczek
-    cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
-    cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
-    if cookie_op is not None and cookie_bl is not None:
-        try:
-            st.session_state["bg_opacity"] = max(0.0, min(1.0, float(cookie_op)))
-            st.session_state["bg_blur"] = max(0, min(20, int(float(cookie_bl))))
-            return
-        except: pass
-        
-    # 3. Fallback: Domyślne wartości systemowe
-    st.session_state["bg_opacity"] = 0.75
-    st.session_state["bg_blur"] = 4
+def wczytaj_ustawienia_z_bazy(uzytkownik):
+    """Pobiera parametry z Google Sheets i twardo nadpisuje duchy w przeglądarce."""
+    op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
+    st.session_state["bg_opacity"] = float(op)
+    st.session_state["bg_blur"] = int(bl)
+    st.session_state["suwak_opacity"] = float(op)
+    st.session_state["suwak_blur"] = int(bl)
 
-# --- AUTOMATYCZNE LOGOWANIE ---
+# --- AUTOLOGOWANIE ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
-if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
+if zalogowany_cookie and st.session_state["zalogowany"] is None and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
     st.session_state["rola"] = pobierz_role_z_bazy(zalogowany_cookie)
-    wczytaj_ustawienia(zalogowany_cookie)
+    wczytaj_ustawienia_z_bazy(zalogowany_cookie)
     st.session_state["ustawienia_wczytane"] = True
     st.rerun()
 
-if "bg_opacity" not in st.session_state: st.session_state.bg_opacity = 0.75
-if "bg_blur" not in st.session_state: st.session_state.bg_blur = 4
-
-# --- APLIKACJA STYLÓW SYSTEMOWYCH ---
+# Aplikowanie stylów NA SAMYM POCZĄTKU na podstawie zmiennych
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # ==========================================
@@ -126,7 +107,7 @@ if st.session_state["zalogowany"] is None:
                         
                         ts = str(int(time.time() * 1000))
                         cookie_manager.set("zalogowany", wybrane_konto, expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"set_log_{ts}")
-                        wczytaj_ustawienia(wybrane_konto)
+                        wczytaj_ustawienia_z_bazy(wybrane_konto)
                         st.session_state["ustawienia_wczytane"] = True
                         st.rerun()
                     else:
@@ -139,6 +120,11 @@ if st.session_state["zalogowany"] is None:
 else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
+
+    # Twarde upewnienie się, że ustawienia są poprawne (np. po wciśnięciu F5)
+    if not st.session_state["ustawienia_wczytane"]:
+        wczytaj_ustawienia_z_bazy(uzytkownik)
+        st.session_state["ustawienia_wczytane"] = True
     
     # --- CYFROWY TOP-BAR SYSTEMOWY ---
     col_logo, col_time, col_user, col_logout = st.columns([2.5, 4.5, 2, 1])
@@ -173,21 +159,16 @@ else:
     if rola == "Admin":
         st_autorefresh(interval=60000, key="auto_ref_admin")
         
-        # Agregacja wskaźników telemetrycznych za pomocą zoptymalizowanego silnika
         df_dzis = data_processing.pobierz_dane_na_dzien()
-        
         total_tasks = len(df_dzis)
         in_transit = len(df_dzis[df_dzis['Status'] == 'W drodze']) if not df_dzis.empty else 0
         pending_warehouse = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if not df_dzis.empty else 0
 
-        # Układ kokpitu dwukolumnowego
+        st.markdown('<span id="main-workspace"></span>', unsafe_allow_html=True)
         col_hud, col_viewport = st.columns([3, 7])
         
-        # --- LEWY PANEL HUD: TELEMETRIA I NAWIGACJA MODUŁOWA ---
         with col_hud:
-            st.markdown('<div class="hud-wrapper">', unsafe_allow_html=True)
             st.markdown('<div class="hud-section-title">📊 TELEMETRIA FLOTY</div>', unsafe_allow_html=True)
-            
             st.markdown(f"""
             <div class="hud-metric-container">
                 <div class="hud-metric-card border-blue"><h5>ZLECENIA DZIŚ</h5><h4>{total_tasks}</h4></div>
@@ -226,54 +207,35 @@ else:
             st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                # Callbacks synchronizujące stan sesji w locie bez zamrażania UI
-                def aktualizuj_opacity():
+                def aktualizuj_ustawienia():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
-                def aktualizuj_blur():
                     st.session_state["bg_blur"] = st.session_state["suwak_blur"]
 
-                st.slider("Przezroczystość", 0.0, 1.0, value=float(st.session_state.get("bg_opacity", 0.75)), step=0.05, key="suwak_opacity", on_change=aktualizuj_opacity)
-                st.slider("Współczynnik Blur", 0, 20, value=int(st.session_state.get("bg_blur", 4)), step=1, key="suwak_blur", on_change=aktualizuj_blur)
+                st.slider("Przezroczystość", 0.0, 1.0, step=0.05, key="suwak_opacity", on_change=aktualizuj_ustawienia)
+                st.slider("Współczynnik Blur", 0, 20, step=1, key="suwak_blur", on_change=aktualizuj_ustawienia)
                 
                 if st.button("💾 Zapamiętaj ustawienia", use_container_width=True):
-                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
-                    ts = str(int(time.time() * 1000))
-                    cookie_manager.set(f"ui_op_{uzytkownik}", str(st.session_state.bg_opacity), expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"s_op_{ts}")
-                    cookie_manager.set(f"ui_bl_{uzytkownik}", str(st.session_state.bg_blur), expires_at=datetime.datetime.now() + datetime.timedelta(days=30), key=f"s_bl_{ts}")
-                    st.toast("Konfiguracja warstwy szklanej zapisana w bazie!")
+                    # Zapis do Google Sheets
+                    database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.suwak_opacity, st.session_state.suwak_blur)
+                    # Wymuszenie twardego przeładowania zmiennych żeby zabić stany z poprzednich sesji
+                    wczytaj_ustawienia_z_bazy(uzytkownik)
+                    st.toast("✅ Konfiguracja powłoki trwale zapisana w Google Sheets!")
                     st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             
-        # --- PRAWY PANEL VIEWPORT: DYNAMICZNY PODGLĄD AKTYWNEGO MODUŁU ---
         with col_viewport:
-            st.markdown('<div class="viewport-wrapper">', unsafe_allow_html=True)
-            
-            if st.session_state["aktywny_modul"] == "Control Tower":
-                ui_mapa.pokaz_mape()
-            elif st.session_state["aktywny_modul"] == "Dashboard": 
-                ui_lukasz.pokaz_dashboard()
-            elif st.session_state["aktywny_modul"] == "Nowy Wpis": 
-                ui_lukasz.pokaz_formularz()
-            elif st.session_state["aktywny_modul"] == "Kalendarz": 
-                ui_kalendarz.pokaz_kalendarz()
-            elif st.session_state["aktywny_modul"] == "Magazyn": 
-                ui_lukasz.pokaz_magazyn()
-            elif st.session_state["aktywny_modul"] == "Konsola Admin.": 
-                ui_lukasz.pokaz_zarzadzanie()
-            elif st.session_state["aktywny_modul"] == "Archiwum": 
-                ui_lukasz.pokaz_archiwum()
-            elif st.session_state["aktywny_modul"] == "Użytkownicy": 
-                ui_uzytkownicy.pokaz_panel_uzytkownikow()
-                
-            st.markdown('</div>', unsafe_allow_html=True)
+            if st.session_state["aktywny_modul"] == "Control Tower": ui_mapa.pokaz_mape()
+            elif st.session_state["aktywny_modul"] == "Dashboard": ui_lukasz.pokaz_dashboard()
+            elif st.session_state["aktywny_modul"] == "Nowy Wpis": ui_lukasz.pokaz_formularz()
+            elif st.session_state["aktywny_modul"] == "Kalendarz": ui_kalendarz.pokaz_kalendarz()
+            elif st.session_state["aktywny_modul"] == "Magazyn": ui_lukasz.pokaz_magazyn()
+            elif st.session_state["aktywny_modul"] == "Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
+            elif st.session_state["aktywny_modul"] == "Archiwum": ui_lukasz.pokaz_archiwum()
+            elif st.session_state["aktywny_modul"] == "Użytkownicy": ui_uzytkownicy.pokaz_panel_uzytkownikow()
 
-    # --- PANEL MOBILNY DLA KIEROWCÓW ---
     elif rola == "Kierowca":
         _, col_mob, _ = st.columns([1, 2, 1])
-        with col_mob:
-            ui_dawid.pokaz_panel() 
+        with col_mob: ui_dawid.pokaz_panel() 
     
-    # --- PANEL TABLICY KANBAN DLA MAGAZYNU ---
     else: 
         st_autorefresh(interval=30000, key="auto_ref_mag")
         ui_magazyn.pokaz_tablice()
