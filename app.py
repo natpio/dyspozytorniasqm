@@ -16,7 +16,7 @@ import style
 import data_processing
 
 # --- 1. KONFIGURACJA STRONY ---
-st.set_page_config(layout="wide", page_title="SQM CONTROL TOWER OS", page_icon="📍", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="SQM Dyspozytornia", page_icon="📍", initial_sidebar_state="collapsed")
 
 cookie_manager = stx.CookieManager(key="sqm_control_tower_v90")
 
@@ -122,7 +122,7 @@ else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
 
-    # Twarde upewnienie się, że ustawienia są poprawne (np. po wciśnięciu F5)
+    # Twarde upewnienie się, że ustawienia are poprawne (np. po wciśnięciu F5)
     if not st.session_state["ustawienia_wczytane"]:
         wczytaj_ustawienia_z_bazy(uzytkownik)
         st.session_state["ustawienia_wczytane"] = True
@@ -130,7 +130,7 @@ else:
     # --- CYFROWY TOP-BAR SYSTEMOWY ---
     col_logo, col_time, col_user, col_logout = st.columns([2.5, 4.5, 2, 1])
     with col_logo:
-        st.markdown(f'<div class="system-brand">SQM CONTROL TOWER <span class="system-status-pill">{rola.upper()}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="system-brand">SQM DYSPOZYTORNIA <span class="system-status-pill">{rola.upper()}</span></div>', unsafe_allow_html=True)
     with col_time:
         teraz_str = datetime.datetime.now(ZoneInfo("Europe/Warsaw")).strftime("%H:%M:%S")
         st.markdown(f'<div class="system-clock">CZAS OPERACYJNY | {teraz_str} PL</div>', unsafe_allow_html=True)
