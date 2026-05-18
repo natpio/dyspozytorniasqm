@@ -15,9 +15,13 @@ def zastosuj_style(opacity, blur):
     bg_img_url = f"data:image/png;base64,{bg_img_base64}" if bg_img_base64 else ""
 
     local_css_string = """
-    /* UKRYWANIE ELEMENTÓW SYSTEMOWYCH */
-    [data-testid="stHeader"] { background-color: transparent !important; }
-    footer, #MainMenu, .stDeployButton { display: none !important; }
+    /* CAŁKOWITE UKRYWANIE ELEMENTÓW SYSTEMOWYCH STREAMLIT */
+    [data-testid="stHeader"] { display: none !important; } /* Ukrywa cały górny pasek (gwiazdka, deploy, menu) */
+    [data-testid="stToolbar"] { visibility: hidden !important; } /* Dodatkowe ubicie paska narzędzi */
+    [data-testid="stDecoration"] { display: none !important; } /* Usuwa cienką kolorową linię na samej górze */
+    footer { display: none !important; } /* Ukrywa stopkę "Made with Streamlit" */
+    #MainMenu { display: none !important; }
+    .stDeployButton { display: none !important; }
 
     /* TŁO NA GŁÓWNYM EKRANIE */
     .stApp {
