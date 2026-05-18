@@ -10,7 +10,6 @@ SCOPES = [
 
 @st.cache_resource
 def get_gspread_client():
-    """Inicjalizuje i zwraca połączenie z Google Sheets na podstawie st.secrets."""
     credentials = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], 
         scopes=SCOPES
@@ -18,24 +17,17 @@ def get_gspread_client():
     return gspread.authorize(credentials)
 
 def get_worksheet(nazwa_arkusza="Arkusz1"):
-    """Pobiera konkretny arkusz z naszego pliku bazy danych."""
     gc = get_gspread_client()
     return gc.open("AplikacjaKasprzak").worksheet(nazwa_arkusza)
 
-# --- FUNKCJE POMOCNICZE: CZYSZCZENIE BUFORA ---
 def czysc_cache_glowny():
-    """Wymusza pobranie świeżych danych z bazy przy następnym zapytaniu."""
     pobierz_wszystkie_dane.clear()
 
 def czysc_cache_archiwum():
     pobierz_archiwum.clear()
 
-
-# --- FUNKCJE: OBSŁUGA ZADAŃ (ODCZYT Z CACHE) ---
-
 @st.cache_data(ttl=30)
 def pobierz_wszystkie_dane():
-    """Pobiera dane z bufora. Bufor żyje 30 sekund lub do momentu ręcznego wyczyszczenia."""
     try:
         return get_worksheet("Arkusz1").get_all_records()
     except Exception as e:
@@ -50,12 +42,9 @@ def pobierz_archiwum():
         print(f"Błąd pobierania archiwum: {e}")
         return []
 
-
-# --- FUNKCJE: OBSŁUGA ZADAŃ (ZAPIS + INVALIDACJA CACHE) ---
-
 def dodaj_zadanie(wiersz):
     get_worksheet("Arkusz1").append_row(wiersz)
-    czysc_cache_glowny() # <--- Pociągamy za spłuczkę po zmianie
+    czysc_cache_glowny()
 
 def aktualizuj_status(id_zadania, nowy_status):
     arkusz = get_worksheet("Arkusz1")
@@ -64,8 +53,7 @@ def aktualizuj_status(id_zadania, nowy_status):
         if komorka:
             arkusz.update_cell(komorka.row, 11, nowy_status)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def usun_zadanie(id_zadania):
     arkusz = get_worksheet("Arkusz1")
@@ -74,8 +62,7 @@ def usun_zadanie(id_zadania):
         if komorka:
             arkusz.delete_rows(komorka.row)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def archiwizuj_zadanie(id_zadania):
     arkusz = get_worksheet("Arkusz1")
@@ -88,8 +75,7 @@ def archiwizuj_zadanie(id_zadania):
             arkusz.delete_rows(komorka.row)
             czysc_cache_glowny()
             czysc_cache_archiwum()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def edytuj_zadanie(id_zadania, nowy_wiersz):
     arkusz = get_worksheet("Arkusz1")
@@ -101,27 +87,32 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
                 lista_komorek[i].value = str(wartosc)
             arkusz.update_cells(lista_komorek)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 
-# --- FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
+# --- TARCZA OCHRONNA USTAWIEŃ UI ---
 
-@st.cache_data(ttl=300) # 5 minut cache, to się rzadko zmienia
+@st.cache_data(ttl=300)
 def pobierz_ustawienia_uzytkownika(uzytkownik):
     try:
         arkusz = get_worksheet("Ustawienia")
         rekordy = arkusz.get_all_records()
         for r in rekordy:
-            if str(r.get('Uzytkownik', '')) == str(uzytkownik):
-                # ZABEZPIECZENIE PRZED POLSKIMI PRZECINKAMI Z GOOGLE SHEETS
-                op_val = str(r.get('Opacity', '0.75')).replace(',', '.')
-                bl_val = str(r.get('Blur', '4')).replace(',', '.')
-                return float(op_val), int(float(bl_val))
+            # Eliminujemy ryzyko spacji w nazwie użytkownika
+            db_user = str(r.get('Uzytkownik', '')).strip().lower()
+            curr_user = str(uzytkownik).strip().lower()
+            
+            if db_user == curr_user:
+                # Zamiana wszystkich przecinków na kropki w locie, żeby Python nie eksplodował
+                op_raw = str(r.get('Opacity', '0.75')).replace(',', '.').strip()
+                bl_raw = str(r.get('Blur', '4')).replace(',', '.').strip()
+                
+                op_val = float(op_raw) if op_raw else 0.75
+                bl_val = int(float(bl_raw)) if bl_raw else 4
+                return op_val, bl_val
     except Exception as e:
         print(f"Błąd pobierania ustawień: {e}")
         pass
-    
     return 0.75, 4 
 
 def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
@@ -131,7 +122,9 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
         
         wiersz_do_aktualizacji = None
         for i, r in enumerate(rekordy):
-            if str(r.get('Uzytkownik', '')) == str(uzytkownik):
+            db_user = str(r.get('Uzytkownik', '')).strip().lower()
+            curr_user = str(uzytkownik).strip().lower()
+            if db_user == curr_user:
                 wiersz_do_aktualizacji = i + 2  
                 break
                 
@@ -141,62 +134,37 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
         else:
             arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
             
-        pobierz_ustawienia_uzytkownika.clear() # Czyścimy cache ustawień po zapisie
-            
+        pobierz_ustawienia_uzytkownika.clear()
     except Exception as e:
         print(f"Błąd zapisu ustawień: {e}")
 
-
-# --- NOWE FUNKCJE: OBSŁUGA UŻYTKOWNIKÓW (LOGOWANIE) ---
-
-@st.cache_data(ttl=300) # 5 minut cache
+@st.cache_data(ttl=300)
 def pobierz_uzytkownikow():
     try:
         sheet = get_worksheet("Uzytkownicy")
-        zapisy = sheet.get_all_records()
-        return zapisy
-    except Exception as e:
-        print(f"Błąd pobierania użytkowników: {e}")
-        return []
+        return sheet.get_all_records()
+    except Exception as e: return []
 
 def dodaj_nowego_uzytkownika(nowy_wiersz):
     try:
         sheet = get_worksheet("Uzytkownicy")
         wiersz_str = [str(x) for x in nowy_wiersz]
         sheet.append_row(wiersz_str)
-        pobierz_uzytkownikow.clear() # Czyścimy cache userów po dodaniu
-    except Exception as e:
-        print(f"Błąd dodawania użytkownika: {e}")
-        raise e
+        pobierz_uzytkownikow.clear()
+    except Exception as e: raise e
 
-
-# --- NOWE FUNKCJE: OBSŁUGA SŁOWNIKÓW (FLOTA I DZIAŁY) ---
-
-@st.cache_data(ttl=300) # Aktualizacja co 5 minut
+@st.cache_data(ttl=300)
 def pobierz_slowniki():
-    """Pobiera listy rozwijane (auta, działy) z arkusza 'Slowniki'."""
     try:
         arkusz = get_worksheet("Slowniki")
         dane = arkusz.get_all_values()
-        
-        if not dane or len(dane) < 2:
-            return {"Auta": ["Brak danych"], "Działy": ["Rental", "Realizacja"]}
-
-        auta = []
-        dzialy = []
-
-        # Pomijamy wiersz nagłówkowy (dane[0])
+        if not dane or len(dane) < 2: return {"Auta": ["Brak danych"], "Działy": ["Rental", "Realizacja"]}
+        auta, dzialy = [], []
         for wiersz in dane[1:]:
-            if len(wiersz) > 0 and wiersz[0].strip():
-                auta.append(wiersz[0].strip())
-            if len(wiersz) > 1 and wiersz[1].strip():
-                dzialy.append(wiersz[1].strip())
-
+            if len(wiersz) > 0 and wiersz[0].strip(): auta.append(wiersz[0].strip())
+            if len(wiersz) > 1 and wiersz[1].strip(): dzialy.append(wiersz[1].strip())
         return {"Auta": auta, "Działy": dzialy}
-        
     except Exception as e:
-        print(f"Błąd pobierania słowników: {e}")
-        # Bezpieczny fallback w razie błędu lub braku zakładki
         return {"Auta": ["Błąd wczytywania floty"], "Działy": ["Rental", "Realizacja"]}
 
 def czysc_cache_slownikow():
