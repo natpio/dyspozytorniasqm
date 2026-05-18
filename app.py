@@ -12,19 +12,27 @@ import ui_kalendarz
 import ui_uzytkownicy
 import database
 import style 
-import config
+import data_processing
 
-# --- 1. KONFIGURACJA STRONY ---
+# --- 1. KONFIGURACJA STRONY (Maksymalne wykorzystanie przestrzeni) ---
 st.set_page_config(layout="wide", page_title="SQM CONTROL TOWER OS", page_icon="📍", initial_sidebar_state="collapsed")
 
+# --- 2. PERSYSTENCJA SESJI (Ciasteczka) ---
 cookie_manager = stx.CookieManager(key="sqm_control_tower_v90")
 
-if "zalogowany" not in st.session_state: st.session_state["zalogowany"] = None
-if "rola" not in st.session_state: st.session_state["rola"] = None
-if "wybrane_konto" not in st.session_state: st.session_state["wybrane_konto"] = None
-if "blokada_autologowania" not in st.session_state: st.session_state["blokada_autologowania"] = False
-if "ustawienia_wczytane" not in st.session_state: st.session_state["ustawienia_wczytane"] = False
-if "aktywny_modul" not in st.session_state: st.session_state["aktywny_modul"] = "Control Tower"
+# --- 3. INICJALIZACJA STANÓW SYSTEMOWYCH ---
+if "zalogowany" not in st.session_state:
+    st.session_state["zalogowany"] = None
+if "rola" not in st.session_state:
+    st.session_state["rola"] = None
+if "wybrane_konto" not in st.session_state:
+    st.session_state["wybrane_konto"] = None
+if "blokada_autologowania" not in st.session_state:
+    st.session_state["blokada_autologowania"] = False
+if "ustawienia_wczytane" not in st.session_state:
+    st.session_state["ustawienia_wczytane"] = False
+if "aktywny_modul" not in st.session_state:
+    st.session_state["aktywny_modul"] = "Control Tower"
 
 def pobierz_role_z_bazy(login):
     uzytkownicy = database.pobierz_uzytkownikow()
@@ -34,7 +42,7 @@ def pobierz_role_z_bazy(login):
     return "Admin"
 
 def wczytaj_ustawienia(uzytkownik):
-    # 1. PRIORYTET: Zawsze najpierw ładujemy z Google Sheets!
+    # 1. PRIORYTET: Zawsze najpierw ładujemy świeże parametry z Google Sheets
     try:
         op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
         st.session_state["bg_opacity"] = max(0.0, min(1.0, float(op)))
@@ -42,7 +50,7 @@ def wczytaj_ustawienia(uzytkownik):
         return
     except: pass
         
-    # 2. W razie braku połączenia ratujemy się ciasteczkiem
+    # 2. Rezerwa: Jeśli brak sieci, ratujemy się pamięcią podręczną ciasteczek
     cookie_op = cookie_manager.get(f"ui_op_{uzytkownik}")
     cookie_bl = cookie_manager.get(f"ui_bl_{uzytkownik}")
     if cookie_op is not None and cookie_bl is not None:
@@ -52,10 +60,11 @@ def wczytaj_ustawienia(uzytkownik):
             return
         except: pass
         
-    # 3. Wartości domyślne, jeśli wszystko inne zawiedzie
+    # 3. Fallback: Domyślne wartości systemowe
     st.session_state["bg_opacity"] = 0.75
     st.session_state["bg_blur"] = 4
 
+# --- AUTOMATYCZNE LOGOWANIE ---
 zalogowany_cookie = cookie_manager.get(cookie="zalogowany")
 if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.session_state["blokada_autologowania"]:
     st.session_state["zalogowany"] = zalogowany_cookie
@@ -67,10 +76,11 @@ if zalogowany_cookie and not st.session_state["ustawienia_wczytane"] and not st.
 if "bg_opacity" not in st.session_state: st.session_state.bg_opacity = 0.75
 if "bg_blur" not in st.session_state: st.session_state.bg_blur = 4
 
+# --- APLIKACJA STYLÓW SYSTEMOWYCH ---
 style.zastosuj_style(st.session_state.bg_opacity, st.session_state.bg_blur)
 
 # ==========================================
-# 🔐 WARSTWA UWIERZYTELNIANIA
+# 🔐 WARSTWA UWIERZYTELNIANIA (LOGOWANIE)
 # ==========================================
 if st.session_state["zalogowany"] is None:
     lista_uz = database.pobierz_uzytkownikow()
@@ -124,12 +134,13 @@ if st.session_state["zalogowany"] is None:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 🌌 PANEL RADAROWY CONTROL TOWER
+# 🌌 CENTRALNY PANEL OPERACYJNY ( HUD + VIEWPORT )
 # ==========================================
 else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
     
+    # --- CYFROWY TOP-BAR SYSTEMOWY ---
     col_logo, col_time, col_user, col_logout = st.columns([2.5, 4.5, 2, 1])
     with col_logo:
         st.markdown(f'<div class="system-brand">SQM CONTROL TOWER <span class="system-status-pill">{rola.upper()}</span></div>', unsafe_allow_html=True)
@@ -158,23 +169,21 @@ else:
 
     st.markdown("<div class='system-divider'></div>", unsafe_allow_html=True)
 
+    # --- ROUTING I WIDOKI DLA ADMINISTRATORA ---
     if rola == "Admin":
         st_autorefresh(interval=60000, key="auto_ref_admin")
         
-        dane_baza = database.pobierz_wszystkie_dane()
-        df_baza = pd.DataFrame(dane_baza) if dane_baza else pd.DataFrame()
-        dzis_str = datetime.datetime.now().strftime("%Y-%m-%d")
+        # Agregacja wskaźników telemetrycznych za pomocą zoptymalizowanego silnika
+        df_dzis = data_processing.pobierz_dane_na_dzien()
         
-        if not df_baza.empty and 'Data' in df_baza.columns:
-            df_dzis = df_baza[df_baza['Data'] == dzis_str]
-            total_tasks = len(df_dzis)
-            in_transit = len(df_dzis[df_dzis['Status'] == 'W drodze']) if 'Status' in df_dzis.columns else 0
-            pending_warehouse = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if 'Status' in df_dzis.columns else 0
-        else:
-            total_tasks, in_transit, pending_warehouse = 0, 0, 0
+        total_tasks = len(df_dzis)
+        in_transit = len(df_dzis[df_dzis['Status'] == 'W drodze']) if not df_dzis.empty else 0
+        pending_warehouse = len(df_dzis[df_dzis['Status'].isin(['Nowe', 'Zaakceptowane', 'Awizacja'])]) if not df_dzis.empty else 0
 
+        # Układ kokpitu dwukolumnowego
         col_hud, col_viewport = st.columns([3, 7])
         
+        # --- LEWY PANEL HUD: TELEMETRIA I NAWIGACJA MODUŁOWA ---
         with col_hud:
             st.markdown('<div class="hud-wrapper">', unsafe_allow_html=True)
             st.markdown('<div class="hud-section-title">📊 TELEMETRIA FLOTY</div>', unsafe_allow_html=True)
@@ -217,8 +226,7 @@ else:
             st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                # --- PRZYWRÓCONE BEZPIECZNE SUWAKI ---
-                # Odizolowanie kluczy na "suwak_opacity" chroni przed resetowaniem wartości w tle!
+                # Callbacks synchronizujące stan sesji w locie bez zamrażania UI
                 def aktualizuj_opacity():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
                 def aktualizuj_blur():
@@ -236,6 +244,7 @@ else:
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
+        # --- PRAWY PANEL VIEWPORT: DYNAMICZNY PODGLĄD AKTYWNEGO MODUŁU ---
         with col_viewport:
             st.markdown('<div class="viewport-wrapper">', unsafe_allow_html=True)
             
@@ -258,11 +267,13 @@ else:
                 
             st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- PANEL MOBILNY DLA KIEROWCÓW ---
     elif rola == "Kierowca":
         _, col_mob, _ = st.columns([1, 2, 1])
         with col_mob:
             ui_dawid.pokaz_panel() 
     
+    # --- PANEL TABLICY KANBAN DLA MAGAZYNU ---
     else: 
         st_autorefresh(interval=30000, key="auto_ref_mag")
         ui_magazyn.pokaz_tablice()
