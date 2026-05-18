@@ -234,8 +234,29 @@ else:
             st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                st.slider("Przezroczystość", 0.0, 1.0, step=0.05, key="bg_opacity")
-                st.slider("Współczynnik Blur", 0, 20, step=1, key="bg_blur")
+                # Definicja bezpiecznych funkcji callback do aktualizacji stanu sesji
+                def aktualizuj_opacity():
+                    st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
+                
+                def aktualizuj_blur():
+                    st.session_state["bg_blur"] = st.session_state["suwak_blur"]
+
+                # Suwaki z odizolowanymi kluczami (suwak_...) zapobiegającymi resetom w tle
+                st.slider(
+                    "Przezroczystość", 0.0, 1.0, 
+                    value=float(st.session_state.get("bg_opacity", 0.55)), 
+                    step=0.05, 
+                    key="suwak_opacity", 
+                    on_change=aktualizuj_opacity
+                )
+                st.slider(
+                    "Współczynnik Blur", 0, 20, 
+                    value=int(st.session_state.get("bg_blur", 12)), 
+                    step=1, 
+                    key="suwak_blur", 
+                    on_change=aktualizuj_blur
+                )
+                
                 if st.button("💾 Zapamiętaj ustawienia", use_container_width=True):
                     database.zapisz_ustawienia_uzytkownika(uzytkownik, st.session_state.bg_opacity, st.session_state.bg_blur)
                     ts = str(int(time.time() * 1000))
