@@ -42,7 +42,7 @@ def pobierz_role_z_bazy(login):
     return "Admin"
 
 def wczytaj_ustawienia_z_bazy(uzytkownik):
-    """Pobiera parametry z Google Sheets i twardo nadpisuje duchy w przeglądarce."""
+    """Pobiera parametry z Google Sheets i twardo nadpisuje dane w przeglądarce."""
     op, bl = database.pobierz_ustawienia_uzytkownika(uzytkownik)
     st.session_state["bg_opacity"] = float(op)
     st.session_state["bg_blur"] = int(bl)
@@ -122,7 +122,7 @@ else:
     uzytkownik = st.session_state["zalogowany"]
     rola = st.session_state.get("rola", "Admin")
 
-    # Twarde upewnienie się, że ustawienia are poprawne (np. po wciśnięciu F5)
+    # Twarde upewnienie się, że ustawienia są poprawne (np. po wciśnięciu F5)
     if not st.session_state["ustawienia_wczytane"]:
         wczytaj_ustawienia_z_bazy(uzytkownik)
         st.session_state["ustawienia_wczytane"] = True
@@ -150,6 +150,8 @@ else:
             st.session_state["ustawienia_wczytane"] = False
             st.session_state["aktywny_modul"] = "Control Tower"
             st.session_state["blokada_autologowania"] = True
+            if "radio_modul" in st.session_state:
+                del st.session_state["radio_modul"]
             
             time.sleep(0.3)
             st.rerun()
@@ -180,17 +182,6 @@ else:
             
             st.markdown('<div class="hud-section-title" style="margin-top:25px;">🛠️ SYSTEM INTERFEJSÓW</div>', unsafe_allow_html=True)
             
-            opcje_modulow = [
-                "📡 Widok Radaru (Control Tower)",
-                "📊 Centrum Statystyk (Dashboard)",
-                "➕ Rejestracja Zadań (Nowy Wpis)",
-                "🏭 Zarządzanie Magazynem",
-                "🗓️ Harmonogram Pracy (Kalendarz)",
-                "🛠️ Konsola Szybkiej Edycji",
-                "📂 Archiwum Cyfrowe Plików",
-                "👥 Zarządzanie Personelem"
-            ]
-            
             mapowanie_nazw = {
                 "📡 Widok Radaru (Control Tower)": "Control Tower",
                 "📊 Centrum Statystyk (Dashboard)": "Dashboard",
@@ -201,11 +192,25 @@ else:
                 "📂 Archiwum Cyfrowe Plików": "Archiwum",
                 "👥 Zarządzanie Personelem": "Użytkownicy"
             }
+            opcje_modulow = list(mapowanie_nazw.keys())
             
-            wyszukaj_indeks = list(mapowanie_nazw.values()).index(st.session_state["aktywny_modul"]) if st.session_state["aktywny_modul"] in mapowanie_nazw.values() else 0
-            
-            wybor_hud = st.radio("Nawigacja Taktyczna", opcje_modulow, index=wyszukaj_indeks, label_visibility="collapsed")
-            st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
+            # 1. Ustawiamy wartość początkową dla stanu menu radiowego, jeśli nie istnieje
+            if "radio_modul" not in st.session_state:
+                odwrocone_mapowanie = {v: k for k, v in mapowanie_nazw.items()}
+                st.session_state["radio_modul"] = odwrocone_mapowanie.get(st.session_state["aktywny_modul"], opcje_modulow[0])
+
+            # 2. Callback wykonujący się natychmiastowo po kliknięciu elementu menu
+            def aktualizuj_modul():
+                st.session_state["aktywny_modul"] = mapowanie_nazw[st.session_state["radio_modul"]]
+
+            # 3. Renderowanie komponentu powiązanego ze stałym kluczem stanu sesji
+            st.radio(
+                "Nawigacja Taktyczna", 
+                opcje_modulow, 
+                key="radio_modul", 
+                label_visibility="collapsed",
+                on_change=aktualizuj_modul
+            )
             
             with st.expander("🎨 Parametry wizualne powłoki"):
                 def aktualizuj_ustawienia():
@@ -228,7 +233,7 @@ else:
             elif st.session_state["aktywny_modul"] == "Dashboard": ui_lukasz.pokaz_dashboard()
             elif st.session_state["aktywny_modul"] == "Nowy Wpis": ui_lukasz.pokaz_formularz()
             elif st.session_state["aktywny_modul"] == "Kalendarz": ui_kalendarz.pokaz_kalendarz()
-            elif st.session_state["aktywny_modul"] == "Magazyn": ui_lukasz.pokaz_magazyn()
+            elif st.session_state["aktywny_modul"] == "Magazyn": ui_magazyn.pokaz_tablice()
             elif st.session_state["aktywny_modul"] == "Konsola Admin.": ui_lukasz.pokaz_zarzadzanie()
             elif st.session_state["aktywny_modul"] == "Archiwum": ui_lukasz.pokaz_archiwum()
             elif st.session_state["aktywny_modul"] == "Użytkownicy": ui_uzytkownicy.pokaz_panel_uzytkownikow()
