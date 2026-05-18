@@ -166,6 +166,9 @@ else:
             # AKTYWACJA BLOKADY - Zapobiega ponownemu przechwyceniu sesji przez stare ciasteczko
             st.session_state["blokada_autologowania"] = True
             
+            # Czyszczenie pamięci menu bocznego przy wylogowaniu
+            if "hud_radio_key" in st.session_state: del st.session_state["hud_radio_key"]
+            
             time.sleep(0.3)
             st.rerun()
 
@@ -230,18 +233,30 @@ else:
             
             wyszukaj_indeks = list(mapowanie_nazw.values()).index(st.session_state["aktywny_modul"]) if st.session_state["aktywny_modul"] in mapowanie_nazw.values() else 0
             
-            wybor_hud = st.radio("Nawigacja Taktyczna", opcje_modulow, index=wyszukaj_indeks, label_visibility="collapsed")
-            st.session_state["aktywny_modul"] = mapowanie_nazw[wybor_hud]
+            # Bezpieczna funkcja callback nawigacji - gwarantuje nadpisanie stanu przed przeładowaniem viewportu
+            def aktualizuj_modul():
+                wybrany_label = st.session_state["hud_radio_key"]
+                st.session_state["aktywny_modul"] = mapowanie_nazw[wybrany_label]
+            
+            # Kotwiczenie menu za pomocą klucza i funkcji on_change
+            st.radio(
+                "Nawigacja Taktyczna", 
+                opcje_modulow, 
+                index=wyszukaj_indeks, 
+                key="hud_radio_key",
+                on_change=aktualizuj_modul,
+                label_visibility="collapsed"
+            )
             
             with st.expander("🎨 Parametry wizualne powłoki"):
-                # Definicja bezpiecznych funkcji callback do aktualizacji stanu sesji
+                # Definicja bezpiecznych funkcji callback do aktualizacji stanu suwaków
                 def aktualizuj_opacity():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
                 
                 def aktualizuj_blur():
                     st.session_state["bg_blur"] = st.session_state["suwak_blur"]
 
-                # Suwaki z odizolowanymi kluczami (suwak_...) zapobiegającymi resetom w tle
+                # Izolacja suwaków przed resetami w tle za pomocą dedykowanych kluczy (suwak_...)
                 st.slider(
                     "Przezroczystość", 0.0, 1.0, 
                     value=float(st.session_state.get("bg_opacity", 0.55)), 
@@ -285,7 +300,7 @@ else:
             elif st.session_state["aktywny_modul"] == "Archiwum": 
                 ui_lukasz.pokaz_archiwum()
             elif st.session_state["aktywny_modul"] == "Użytkownicy": 
-                ui_uzytkownicy.pokaz_panel_uzytkownikow()
+                ui_uzytkownicy.pokban_panel_uzytkownikow() if hasattr(ui_uzytkownicy, 'pokban_panel_uzytkownikow') else ui_uzytkownicy.pokaz_panel_uzytkownikow()
                 
             st.markdown('</div>', unsafe_allow_html=True)
 
