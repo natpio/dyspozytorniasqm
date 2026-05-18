@@ -1,14 +1,13 @@
 import streamlit as st
-import pandas as pd
 import folium
-import database
 import streamlit.components.v1 as components
-import random
+import hashlib
+import data_processing
 
-def geokoduj(adres):
+def geokoduj(adres, seed_string=""):
     """
-    Prosty system przypisywania współrzędnych na podstawie nazwy miasta.
-    Dodaje lekki losowy 'szum', aby pinezki w tym samym mieście nie nakładały się na siebie.
+    Geokodowanie ze stabilnym przesunięciem (hashing).
+    Dzięki temu pinezki dla tych samych zadań zawsze lądują w tym samym miejscu.
     """
     miasta = {
         "poznań": [52.4064, 16.9252], "warszawa": [52.2297, 21.0122],
@@ -22,98 +21,103 @@ def geokoduj(adres):
     
     for miasto, coords in miasta.items():
         if miasto in adres_lower:
-            return [coords[0] + random.uniform(-0.01, 0.01), coords[1] + random.uniform(-0.01, 0.01)]
+            # Deterministic offset: generujemy pseudolosowe, ale stałe wartości
+            if seed_string:
+                hash_val = int(hashlib.md5(str(seed_string).encode('utf-8')).hexdigest(), 16)
+                offset_lat = ((hash_val % 400) / 10000.0) - 0.02
+                offset_lon = (((hash_val // 400) % 400) / 10000.0) - 0.02
+                return [coords[0] + offset_lat, coords[1] + offset_lon]
+            return coords
             
-    # Jeśli nie rozpoznano miasta, wrzuca pinezkę w losowe okolice bazy w Komornikach
-    return [52.3324 + random.uniform(-0.05, 0.05), 16.8058 + random.uniform(-0.05, 0.05)]
+    # Jeśli miasta nie ma na liście, centrujemy na Magazyn SQM
+    return [52.3324, 16.8058]
 
 def pokaz_mape():
-    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">📍</span><span class="dashboard-title">Mapa Operacyjna & Routing</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-subheader">Bieżący podgląd tras i lokalizacji w oparciu o silnik Google Maps.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🗺️</span><span class="dashboard-title">Radar Operacyjny</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-subheader">Podgląd na żywo dyslokacji floty i statusu zadań w terenie.</div>', unsafe_allow_html=True)
 
-    dane = database.pobierz_wszystkie_dane()
-    if not dane:
-        st.info("Brak zadań do wyświetlenia na mapie.")
+    # --- POBRANIE ZOPTYMALIZOWANYCH DANYCH ---
+    df_dzis = data_processing.pobierz_dane_na_dzien()
+    
+    if df_dzis.empty:
+        st.info("Brak zadań w bazie na dzisiaj.")
         return
 
-    df = pd.DataFrame(dane)
-    
-    # Sortowanie chronologiczne dla poprawnego rysowania linii
-    df['Sort_DT'] = pd.to_datetime(df['Data'] + ' ' + df['Godzina'], errors='coerce')
-    df = df.sort_values('Sort_DT')
-    
-    # Inicjalizacja czystej mapy (bez domyślnego kafelka)
-    m = folium.Map(location=[51.9194, 19.1451], zoom_start=6, tiles=None)
+    # Odfiltrowujemy zadania wewnątrzmagazynowe, interesują nas tylko wyjazdy
+    _, df_wyjazdy = data_processing.rozdziel_magazyn_wyjazdy(df_dzis)
 
-    # MAGIC TRICK: Wstrzyknięcie oryginalnych, dokładnych kafelków drogowych Google Maps
-    folium.TileLayer(
-        tiles='http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-        attr='Google Maps',
-        name='Google Maps Drogowa',
-        overlay=False,
-        control=True
-    ).add_to(m)
+    if df_wyjazdy.empty:
+        st.info("Brak aktywnych wyjazdów w terenie na dzisiaj.")
+        return
 
-    # Kolory tras dla różnych kierowców
-    kolory_tras = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
-    kierowcy = df['Wykonawca'].unique()
-    mapa_kolorow = {kierowca: kolory_tras[i % len(kolory_tras)] for i, kierowca in enumerate(kierowcy)}
+    # Inicjalizacja mapy wyśrodkowanej na Polskę, ciemny motyw
+    m = folium.Map(location=[52.0693, 19.4803], zoom_start=6, tiles="CartoDB dark_matter")
 
-    for kierowca in kierowcy:
-        df_kierowca = df[df['Wykonawca'] == kierowca].copy()
-        punkty_trasy = []
+    # Mapowanie kolorów do statusów
+    kolory_statusow = {
+        'Nowe': 'red',
+        'Zaakceptowane': 'orange',
+        'W drodze': 'blue',
+        'Zakończone': 'green'
+    }
 
-        for _, row in df_kierowca.iterrows():
-            status = str(row.get('Status', ''))
-            loc = geokoduj(row.get('Lokalizacja', ''))
-            punkty_trasy.append(loc)
-            
-            # Kolor pinezki zależy od jej statusu
-            if status == 'Zakończone':
-                kolor_pin = 'green'
-                ikona = 'check'
-            elif status == 'W drodze':
-                kolor_pin = 'blue'
-                ikona = 'truck'
-            else:
-                kolor_pin = 'orange'
-                ikona = 'info'
-            
-            # Tooltip (po najechaniu)
-            tooltip_text = f"📅 {row.get('Data', '')} | {row.get('Klient', '')} | Proj: {row.get('Nr Projektu', 'Brak')}"
-            
-            # Rozbudowana wizytówka (po kliknięciu) z kolorem nagłówka zadanym z koloru trasy
-            popup_html = f"""
-            <div style="font-family: sans-serif; min-width: 180px;">
-                <div style="background: {mapa_kolorow[kierowca]}; color: white; padding: 5px; border-radius: 5px 5px 0 0; font-weight: bold; text-align: center;">
-                    {row.get('Data', '')} | {row.get('Godzina', '')}
-                </div>
-                <div style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0 0 5px 5px;">
-                    <b style="color: #0f172a; font-size: 1.1em;">🏢 {row.get('Klient', '')}</b><br>
-                    <hr style="margin: 8px 0; border: 0; border-top: 1px solid #cbd5e1;">
-                    <b style="color: #475569;">Akcja:</b> {row.get('Typ Akcji', '')}<br>
-                    <b style="color: #475569;">Status:</b> {status}<br>
-                    <b style="color: #475569;">Kierowca:</b> {kierowca} ({row.get('Auto', '')})
-                </div>
+    # Zbieranie punktów do rysowania tras (grupowane po kierowcach)
+    trasy_kierowcow = {}
+
+    for _, row in df_wyjazdy.iterrows():
+        id_zadania = row.get('ID', '')
+        adres = row.get('Lokalizacja', '')
+        status = row.get('Status', 'Nowe')
+        kierowca = row.get('Wykonawca', 'Nieznany')
+        
+        # Używamy ID zadania jako stałego seedu, by pinezka stała w miejscu
+        loc = geokoduj(adres, seed_string=id_zadania)
+        
+        kolor_pin = kolory_statusow.get(status, 'gray')
+        ikona = 'truck' if status == 'W drodze' else 'info-sign'
+        
+        # Zapisujemy punkt do wyrysowania trasy dla danego kierowcy
+        if kierowca not in trasy_kierowcow:
+            trasy_kierowcow[kierowca] = []
+        trasy_kierowcow[kierowca].append(loc)
+
+        tooltip_text = f"{kierowca} - {row.get('Klient', '')} ({status})"
+        
+        popup_html = f"""
+        <div style="font-family: sans-serif; min-width: 200px;">
+            <div style="background: {kolor_pin}; color: white; padding: 5px; border-radius: 5px 5px 0 0; font-weight: bold; text-align: center;">
+                {row.get('Data', '')} | {row.get('Godzina', '')}
             </div>
-            """
-            
-            folium.Marker(
-                location=loc,
-                popup=folium.Popup(popup_html, max_width=300),
-                tooltip=tooltip_text,
-                icon=folium.Icon(color=kolor_pin, icon=ikona, prefix='fa')
-            ).add_to(m)
+            <div style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0 0 5px 5px;">
+                <b style="color: #0f172a; font-size: 1.1em;">🏢 {row.get('Klient', '')}</b><br>
+                <hr style="margin: 8px 0; border: 0; border-top: 1px solid #cbd5e1;">
+                <b style="color: #475569;">Akcja:</b> {row.get('Typ Akcji', '')}<br>
+                <b style="color: #475569;">Status:</b> {status}<br>
+                <b style="color: #475569;">Kierowca:</b> {kierowca} ({row.get('Auto', '')})
+            </div>
+        </div>
+        """
+        
+        folium.Marker(
+            location=loc,
+            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=tooltip_text,
+            icon=folium.Icon(color=kolor_pin, icon=ikona, prefix='fa')
+        ).add_to(m)
 
-        # Rysowanie linii trasy między punktami dla danego kierowcy
-        if len(punkty_trasy) > 1:
+    # Rysowanie przerywanej linii trasy między punktami dla danego kierowcy
+    for k_name, punkty in trasy_kierowcow.items():
+        if len(punkty) > 1:
             folium.PolyLine(
-                locations=punkty_trasy,
-                color=mapa_kolorow[kierowca],
-                weight=4,
-                opacity=0.6,
-                tooltip=f"Planowana trasa: {kierowca}"
+                punkty,
+                color="white",
+                weight=2,
+                opacity=0.5,
+                dash_array='5, 5'
             ).add_to(m)
 
-    # Wstrzyknięcie mapy jako niezależnego komponentu HTML
-    components.html(m._repr_html_(), height=650)
+    # Wstrzyknięcie zoptymalizowanej mapy do interfejsu Streamlit
+    m.get_root().width = "100%"
+    m.get_root().height = "600px"
+    iframe = m.get_root()._repr_html_()
+    components.html(iframe, height=620)
