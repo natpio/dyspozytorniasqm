@@ -2,6 +2,7 @@ import streamlit as st
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
 import datetime
+from zoneinfo import ZoneInfo
 import time
 import pandas as pd
 import ui_lukasz
@@ -131,8 +132,8 @@ else:
     with col_logo:
         st.markdown(f'<div class="system-brand">SQM CONTROL TOWER <span class="system-status-pill">{rola.upper()}</span></div>', unsafe_allow_html=True)
     with col_time:
-        teraz_str = datetime.datetime.now().strftime("%H:%M:%S [CET]")
-        st.markdown(f'<div class="system-clock">📡 RADAR LIVE | {teraz_str}</div>', unsafe_allow_html=True)
+        teraz_str = datetime.datetime.now(ZoneInfo("Europe/Warsaw")).strftime("%H:%M:%S")
+        st.markdown(f'<div class="system-clock">CZAS OPERACYJNY | {teraz_str} PL</div>', unsafe_allow_html=True)
     with col_user:
         st.markdown(f'<div class="system-user-tag">Operator: <b>{uzytkownik}</b></div>', unsafe_allow_html=True)
     with col_logout:
