@@ -114,7 +114,10 @@ def pobierz_ustawienia_uzytkownika(uzytkownik):
         rekordy = arkusz.get_all_records()
         for r in rekordy:
             if str(r.get('Uzytkownik', '')) == str(uzytkownik):
-                return float(r.get('Opacity', 0.75)), int(r.get('Blur', 4))
+                # ZABEZPIECZENIE PRZED POLSKIMI PRZECINKAMI Z GOOGLE SHEETS
+                op_val = str(r.get('Opacity', '0.75')).replace(',', '.')
+                bl_val = str(r.get('Blur', '4')).replace(',', '.')
+                return float(op_val), int(float(bl_val))
     except Exception as e:
         print(f"Błąd pobierania ustawień: {e}")
         pass
