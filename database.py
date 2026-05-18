@@ -10,6 +10,7 @@ SCOPES = [
 
 @st.cache_resource
 def get_gspread_client():
+    """Inicjalizuje i zwraca połączenie z Google Sheets na podstawie st.secrets."""
     credentials = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], 
         scopes=SCOPES
@@ -26,11 +27,14 @@ def czysc_cache_glowny():
 def czysc_cache_archiwum():
     pobierz_archiwum.clear()
 
+# --- FUNKCJE: OBSŁUGA ZADAŃ ---
+
 @st.cache_data(ttl=30)
 def pobierz_wszystkie_dane():
     try:
         return get_worksheet("Arkusz1").get_all_records()
     except Exception as e:
+        print(f"Błąd pobierania danych: {e}")
         return []
 
 @st.cache_data(ttl=30)
@@ -92,7 +96,7 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
 
 @st.cache_data(ttl=300)
 def pobierz_ustawienia_uzytkownika(uzytkownik):
-    """Odczyt bezpośrednio z kolumn. Niestraszne mu zmienione nagłówki czy spacje!"""
+    """Odczyt bezpośrednio z kolumn. Niestraszne mu zmienione nagłówki, przecinki czy spacje!"""
     try:
         arkusz = get_worksheet("Ustawienia")
         dane = arkusz.get_all_values()
@@ -113,7 +117,7 @@ def pobierz_ustawienia_uzytkownika(uzytkownik):
                     try: bl_raw = str(wiersz[2]).replace(',', '.').strip()
                     except: bl_raw = "4"
                     
-                    # Wymuszenie formatu liczbowego
+                    # Wymuszenie bezpiecznego formatu liczbowego
                     try: op_val = float(op_raw)
                     except: op_val = 0.75
                     
@@ -141,6 +145,7 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
                     break
                     
         if wiersz_do_aktualizacji:
+            # Używamy ułamków z kropką - gspread sam sobie poradzi z typowaniem do arkusza
             arkusz.update_cell(wiersz_do_aktualizacji, 2, float(opacity))
             arkusz.update_cell(wiersz_do_aktualizacji, 3, int(blur))
         else:
@@ -150,6 +155,8 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
             
     except Exception as e:
         print(f"Błąd zapisu ustawień: {e}")
+
+# --- FUNKCJE: OBSŁUGA UŻYTKOWNIKÓW ---
 
 @st.cache_data(ttl=300)
 def pobierz_uzytkownikow():
@@ -165,6 +172,8 @@ def dodaj_nowego_uzytkownika(nowy_wiersz):
         sheet.append_row(wiersz_str)
         pobierz_uzytkownikow.clear()
     except Exception as e: raise e
+
+# --- FUNKCJE: OBSŁUGA SŁOWNIKÓW (DZIELONE FLOTY) ---
 
 @st.cache_data(ttl=300)
 def pobierz_slowniki():
