@@ -21,3 +21,9 @@ font="sans serif"
 # Opcjonalnie: wyłącza domyślne menu "hamburger" i znak wodny na dole
 enableCORS=false
 runOnSave=true
+
+[client]
+# Ukrywa większość elementów z paska narzędzi na poziomie serwera (np. share, deploy)
+toolbarMode = "minimal"
+# Wyłącza domyślną, lewą nawigację (zapobiega pojawianiu się bocznego paska)
+showSidebarNavigation = false
