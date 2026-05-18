@@ -10,7 +10,6 @@ SCOPES = [
 
 @st.cache_resource
 def get_gspread_client():
-    """Inicjalizuje i zwraca połączenie z Google Sheets na podstawie st.secrets."""
     credentials = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"], 
         scopes=SCOPES
@@ -18,28 +17,20 @@ def get_gspread_client():
     return gspread.authorize(credentials)
 
 def get_worksheet(nazwa_arkusza="Arkusz1"):
-    """Pobiera konkretny arkusz z naszego pliku bazy danych."""
     gc = get_gspread_client()
     return gc.open("AplikacjaKasprzak").worksheet(nazwa_arkusza)
 
-# --- FUNKCJE POMOCNICZE: CZYSZCZENIE BUFORA ---
 def czysc_cache_glowny():
-    """Wymusza pobranie świeżych danych z bazy przy następnym zapytaniu."""
     pobierz_wszystkie_dane.clear()
 
 def czysc_cache_archiwum():
     pobierz_archiwum.clear()
 
-
-# --- FUNKCJE: OBSŁUGA ZADAŃ (ODCZYT Z CACHE) ---
-
 @st.cache_data(ttl=30)
 def pobierz_wszystkie_dane():
-    """Pobiera dane z bufora. Bufor żyje 30 sekund lub do momentu ręcznego wyczyszczenia."""
     try:
         return get_worksheet("Arkusz1").get_all_records()
     except Exception as e:
-        print(f"Błąd pobierania danych: {e}")
         return []
 
 @st.cache_data(ttl=30)
@@ -47,11 +38,7 @@ def pobierz_archiwum():
     try:
         return get_worksheet("Archiwum").get_all_records()
     except Exception as e:
-        print(f"Błąd pobierania archiwum: {e}")
         return []
-
-
-# --- FUNKCJE: OBSŁUGA ZADAŃ (ZAPIS + INVALIDACJA CACHE) ---
 
 def dodaj_zadanie(wiersz):
     get_worksheet("Arkusz1").append_row(wiersz)
@@ -64,8 +51,7 @@ def aktualizuj_status(id_zadania, nowy_status):
         if komorka:
             arkusz.update_cell(komorka.row, 11, nowy_status)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def usun_zadanie(id_zadania):
     arkusz = get_worksheet("Arkusz1")
@@ -74,8 +60,7 @@ def usun_zadanie(id_zadania):
         if komorka:
             arkusz.delete_rows(komorka.row)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def archiwizuj_zadanie(id_zadania):
     arkusz = get_worksheet("Arkusz1")
@@ -88,8 +73,7 @@ def archiwizuj_zadanie(id_zadania):
             arkusz.delete_rows(komorka.row)
             czysc_cache_glowny()
             czysc_cache_archiwum()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 def edytuj_zadanie(id_zadania, nowy_wiersz):
     arkusz = get_worksheet("Arkusz1")
@@ -101,72 +85,78 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
                 lista_komorek[i].value = str(wartosc)
             arkusz.update_cells(lista_komorek)
             czysc_cache_glowny()
-    except Exception as e:
-        pass
+    except Exception as e: pass
 
 
-# --- TARCZA OCHRONNA USTAWIEŃ UI ---
+# --- TARCZA OCHRONNA: CZYTANIE WEDŁUG KOLUMN, A NIE NAGŁÓWKÓW ---
 
 @st.cache_data(ttl=300)
 def pobierz_ustawienia_uzytkownika(uzytkownik):
-    """Pobiera parametry wizualne z chmury, eliminując błędy formatowania liczbowego."""
+    """Odczyt bezpośrednio z kolumn. Niestraszne mu zmienione nagłówki czy spacje!"""
     try:
         arkusz = get_worksheet("Ustawienia")
-        rekordy = arkusz.get_all_records()
-        for r in rekordy:
-            # Standaryzacja nazw użytkowników w celu uniknięcia problemów ze spacjami/wielkością liter
-            db_user = str(r.get('Uzytkownik', '')).strip().lower()
-            curr_user = str(uzytkownik).strip().lower()
-            
-            if db_user == curr_user:
-                # Zamiana polskich przecinków na kropki w locie (np. '0,65' -> '0.65')
-                op_raw = str(r.get('Opacity', '0.75')).replace(',', '.').strip()
-                bl_raw = str(r.get('Blur', '4')).replace(',', '.').strip()
-                
-                op_val = float(op_raw) if op_raw else 0.75
-                bl_val = int(float(bl_raw)) if bl_raw else 4
-                return op_val, bl_val
+        dane = arkusz.get_all_values()
+        if not dane or len(dane) < 2: 
+            return 0.75, 4
+        
+        curr_user = str(uzytkownik).strip().lower()
+        
+        # Przeszukujemy wiersze (pomijając nagłówek)
+        for wiersz in dane[1:]:
+            if len(wiersz) > 0:
+                db_user = str(wiersz[0]).strip().lower()
+                if db_user == curr_user:
+                    # Zamiana polskich przecinków na kropki (Kolumna B to Opacity, Kolumna C to Blur)
+                    try: op_raw = str(wiersz[1]).replace(',', '.').strip()
+                    except: op_raw = "0.75"
+                    
+                    try: bl_raw = str(wiersz[2]).replace(',', '.').strip()
+                    except: bl_raw = "4"
+                    
+                    # Wymuszenie formatu liczbowego
+                    try: op_val = float(op_raw)
+                    except: op_val = 0.75
+                    
+                    try: bl_val = int(float(bl_raw))
+                    except: bl_val = 4
+                    
+                    return op_val, bl_val
     except Exception as e:
-        print(f"Błąd pobierania ustawień: {e}")
+        print(f"Błąd odczytu: {e}")
         pass
-    
+        
     return 0.75, 4 
 
 def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
     try:
         arkusz = get_worksheet("Ustawienia")
-        rekordy = arkusz.get_all_records()
+        dane = arkusz.get_all_values()
+        curr_user = str(uzytkownik).strip().lower()
         
         wiersz_do_aktualizacji = None
-        for i, r in enumerate(rekordy):
-            db_user = str(r.get('Uzytkownik', '')).strip().lower()
-            curr_user = str(uzytkownik).strip().lower()
-            if db_user == curr_user:
-                wiersz_do_aktualizacji = i + 2  
-                break
-                
+        for i, wiersz in enumerate(dane):
+            if i > 0 and len(wiersz) > 0:
+                if str(wiersz[0]).strip().lower() == curr_user:
+                    wiersz_do_aktualizacji = i + 1  
+                    break
+                    
         if wiersz_do_aktualizacji:
             arkusz.update_cell(wiersz_do_aktualizacji, 2, float(opacity))
             arkusz.update_cell(wiersz_do_aktualizacji, 3, int(blur))
         else:
             arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
             
-        pobierz_ustawienia_uzytkownika.clear() # Czyszczenie pamięci podręcznej po zapisie
+        pobierz_ustawienia_uzytkownika.clear() 
             
     except Exception as e:
         print(f"Błąd zapisu ustawień: {e}")
-
-
-# --- FUNKCJE: OBSŁUGA UŻYTKOWNIKÓW (LOGOWANIE) ---
 
 @st.cache_data(ttl=300)
 def pobierz_uzytkownikow():
     try:
         sheet = get_worksheet("Uzytkownicy")
         return sheet.get_all_records()
-    except Exception as e:
-        print(f"Błąd pobierania użytkowników: {e}")
-        return []
+    except Exception as e: return []
 
 def dodaj_nowego_uzytkownika(nowy_wiersz):
     try:
@@ -174,16 +164,10 @@ def dodaj_nowego_uzytkownika(nowy_wiersz):
         wiersz_str = [str(x) for x in nowy_wiersz]
         sheet.append_row(wiersz_str)
         pobierz_uzytkownikow.clear()
-    except Exception as e:
-        print(f"Błąd dodawania użytkownika: {e}")
-        raise e
-
-
-# --- FUNKCJE: OBSŁUGA SŁOWNIKÓW (DZIELONE FLOTY) ---
+    except Exception as e: raise e
 
 @st.cache_data(ttl=300)
 def pobierz_slowniki():
-    """Pobiera dynamiczne listy aut i działów z dedykowanej zakładki 'Slowniki'."""
     try:
         arkusz = get_worksheet("Slowniki")
         dane = arkusz.get_all_values()
@@ -191,21 +175,13 @@ def pobierz_slowniki():
         if not dane or len(dane) < 2:
             return {"Auta": ["Brak danych"], "Działy": ["Rental", "Realizacja"]}
 
-        auta = []
-        dzialy = []
-
-        # Parsowanie kolumn pomijając wiersz nagłówkowy
+        auta, dzialy = [], []
         for wiersz in dane[1:]:
-            if len(wiersz) > 0 and wiersz[0].strip():
-                auta.append(wiersz[0].strip())
-            if len(wiersz) > 1 and wiersz[1].strip():
-                dzialy.append(wiersz[1].strip())
-
+            if len(wiersz) > 0 and wiersz[0].strip(): auta.append(wiersz[0].strip())
+            if len(wiersz) > 1 and wiersz[1].strip(): dzialy.append(wiersz[1].strip())
         return {"Auta": auta, "Działy": dzialy}
-        
     except Exception as e:
-        print(f"Błąd pobierania słowników: {e}")
-        return {"Auta": ["Błąd wczytywania floty"], "Działy": ["Rental", "Realizacja"]}
+        return {"Auta": ["Błąd wczytywania"], "Działy": ["Rental", "Realizacja"]}
 
 def czysc_cache_slownikow():
     pobierz_slowniki.clear()
