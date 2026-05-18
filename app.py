@@ -300,7 +300,7 @@ else:
             elif st.session_state["aktywny_modul"] == "Archiwum": 
                 ui_lukasz.pokaz_archiwum()
             elif st.session_state["aktywny_modul"] == "Użytkownicy": 
-                ui_uzytkownicy.pokban_panel_uzytkownikow() if hasattr(ui_uzytkownicy, 'pokban_panel_uzytkownikow') else ui_uzytkownicy.pokaz_panel_uzytkownikow()
+                ui_uzytkownicy.pokaz_panel_uzytkownikow()
                 
             st.markdown('</div>', unsafe_allow_html=True)
 
