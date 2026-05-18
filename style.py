@@ -35,12 +35,14 @@ def zastosuj_style(opacity, blur):
         background-attachment: fixed !important;
     }
     
+    /* Globalne, ciemne tło (Glassmorphism) */
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; 
         backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important; 
         -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important;
-        z-index: 0 !important; pointer-events: none !important; 
+        z-index: -1 !important; /* Gwarancja z-index: -1, tło ląduje POD spodem aplikacji */
+        pointer-events: none !important; 
     }
 
     /* ========================================= */
@@ -103,21 +105,9 @@ def zastosuj_style(opacity, blur):
         font-weight: 900 !important;
     }
 
-    /* Akcenty kolorystyczne na górze kart z zaokrągleniami */
     .border-blue { border-top: 4px solid #3b82f6 !important; }
     .border-green { border-top: 4px solid #10b981 !important; }
     .border-orange { border-top: 4px solid #f59e0b !important; }
-
-    /* VIEWPORT BORDER (Prawy panel roboczy) */
-    .viewport-wrapper {
-        background: rgba(30, 41, 59, 0.5) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        border-radius: 16px !important;
-        padding: 25px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-        min-height: 85vh !important;
-    }
 
     /* TOP-BAR SYSTEMOWY */
     .system-brand {
@@ -213,7 +203,6 @@ def zastosuj_style(opacity, blur):
     .dashboard-header { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
     .dashboard-title-icon { font-size: 2.5rem; }
     .dashboard-title { font-size: 2rem; font-weight: 900; letter-spacing: -1px; }
-
     """
 
     local_css_string = local_css_string.replace("BACKGROUND_URL_PLACEHOLDER", bg_img_url)
