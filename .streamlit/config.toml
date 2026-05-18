@@ -1,0 +1,23 @@
+[theme]
+# Wymuszamy natywny tryb ciemny
+base="dark"
+
+# Twój główny kolor akcentów (przyciski, zaznaczenia)
+primaryColor="#38bdf8"
+
+# Główne tło aplikacji
+backgroundColor="#0f172a"
+
+# Tło paneli bocznych i formularzy (lekko jaśniejsze)
+secondaryBackgroundColor="#1e293b"
+
+# Śnieżnobiały, w 100% czytelny tekst
+textColor="#f8fafc"
+
+# Nowoczesna, czysta czcionka
+font="sans serif"
+
+[server]
+# Opcjonalnie: wyłącza domyślne menu "hamburger" i znak wodny na dole
+enableCORS=false
+runOnSave=true
