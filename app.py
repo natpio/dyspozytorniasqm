@@ -12,7 +12,6 @@ import ui_kalendarz
 import ui_uzytkownicy
 import database
 import style 
-import config
 
 # --- 1. KONFIGURACJA STRONY (Maksymalne wykorzystanie przestrzeni) ---
 st.set_page_config(layout="wide", page_title="SQM CONTROL TOWER OS", page_icon="📍", initial_sidebar_state="collapsed")
