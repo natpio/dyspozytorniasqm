@@ -1,36 +1,22 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
-import database
+import data_processing
 
 def pokaz_tablice():
     # --- NAGŁÓWEK ---
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">🏭</span><span class="dashboard-title">Tablica Magazynowa</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Bieżące zadania sprzętowe zaplanowane na dzisiaj.</div>', unsafe_allow_html=True)
 
-    # --- POBRANIE I FILTROWANIE DANYCH ---
-    dane = database.pobierz_wszystkie_dane()
-    if not dane:
-        st.info("Brak zadań w bazie.")
-        return
-
-    df = pd.DataFrame(dane)
-    dzis = datetime.now().strftime("%Y-%m-%d")
-    df_dzis = df[df['Data'] == dzis]
+    # --- POBRANIE DANYCH PRZEZ WARSTWĘ PROCESOWANIA (Automatycznie posortowane na dziś) ---
+    df_dzis = data_processing.pobierz_dane_na_dzien()
 
     if df_dzis.empty:
         st.success("Wszystko zrobione! Brak zadań na dzisiaj. Można iść na kawę ☕")
         return
 
-    # Sortowanie po godzinie
-    df_dzis['Data_sort'] = pd.to_datetime(df_dzis['Data'], format='%Y-%m-%d', errors='coerce')
-    df_dzis = df_dzis.sort_values(by=['Data_sort', 'Godzina']).drop(columns=['Data_sort'])
+    # Podział zadań na Wydania i Przyjęcia za pomocą centralnej funkcji logiki biznesowej
+    df_wydania, df_przyjecia = data_processing.rozdziel_wydania_przyjecia(df_dzis)
 
-    # Podział zadań na Wydania i Przyjęcia na podstawie 'Typu Akcji'
-    df_wydania = df_dzis[df_dzis['Typ Akcji'].str.contains("Dowóz|Odbiór przez klienta", case=False)]
-    df_przyjecia = df_dzis[df_dzis['Typ Akcji'].str.contains("Odbiór -|Zwrot przez klienta", case=False)]
-
-    # --- RYSOWANIE TABLICY (2 KOLUMNY) ---
+    # --- RYSOWANIE TABLICY KANBAN (2 KOLUMNY) ---
     col1, col2 = st.columns(2)
     
     with col1:
@@ -39,7 +25,6 @@ def pokaz_tablice():
             st.info("Brak wydań zaplanowanych na dzisiaj.")
         else:
             for _, row in df_wydania.iterrows():
-                # Wywołanie funkcji rysującej kartę w kolorach pomarańczowych
                 renderuj_karte(row, "#e67e22", "#fffbeb", "#d97706")
 
     with col2:
@@ -48,7 +33,6 @@ def pokaz_tablice():
             st.info("Brak przyjęć zaplanowanych na dzisiaj.")
         else:
             for _, row in df_przyjecia.iterrows():
-                # Wywołanie funkcji rysującej kartę w kolorach zielonych
                 renderuj_karte(row, "#27ae60", "#f0fdf4", "#16a34a")
 
 def renderuj_karte(row, kolor_ramki, kolor_tla_pigulki, kolor_tekstu_pigulki):
