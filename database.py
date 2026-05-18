@@ -22,50 +22,62 @@ def get_worksheet(nazwa_arkusza="Arkusz1"):
     gc = get_gspread_client()
     return gc.open("AplikacjaKasprzak").worksheet(nazwa_arkusza)
 
-# --- FUNKCJE: OBSŁUGA ZADAŃ ---
+# --- FUNKCJE POMOCNICZE: CZYSZCZENIE BUFORA ---
+def czysc_cache_glowny():
+    """Wymusza pobranie świeżych danych z bazy przy następnym zapytaniu."""
+    pobierz_wszystkie_dane.clear()
 
+def czysc_cache_archiwum():
+    pobierz_archiwum.clear()
+
+
+# --- FUNKCJE: OBSŁUGA ZADAŃ (ODCZYT Z CACHE) ---
+
+@st.cache_data(ttl=30)
 def pobierz_wszystkie_dane():
-    """Pobiera wszystkie aktywne zadania z głównego arkusza."""
+    """Pobiera dane z bufora. Bufor żyje 30 sekund lub do momentu ręcznego wyczyszczenia."""
     try:
         return get_worksheet("Arkusz1").get_all_records()
     except Exception as e:
         print(f"Błąd pobierania danych: {e}")
         return []
 
+@st.cache_data(ttl=30)
 def pobierz_archiwum():
-    """Pobiera wszystkie zarchiwizowane zadania z zakładki Archiwum."""
     try:
         return get_worksheet("Archiwum").get_all_records()
     except Exception as e:
         print(f"Błąd pobierania archiwum: {e}")
         return []
 
+
+# --- FUNKCJE: OBSŁUGA ZADAŃ (ZAPIS + INVALIDACJA CACHE) ---
+
 def dodaj_zadanie(wiersz):
-    """Dodaje nowy wiersz z zadaniem na koniec głównego arkusza."""
     get_worksheet("Arkusz1").append_row(wiersz)
+    czysc_cache_glowny() # <--- Pociągamy za spłuczkę po zmianie
 
 def aktualizuj_status(id_zadania, nowy_status):
-    """Aktualizuje status wybranego zadania (kolumna 11 to 'Status')."""
     arkusz = get_worksheet("Arkusz1")
     try:
         komorka = arkusz.find(str(id_zadania))
         if komorka:
             arkusz.update_cell(komorka.row, 11, nowy_status)
+            czysc_cache_glowny()
     except Exception as e:
         pass
 
 def usun_zadanie(id_zadania):
-    """Usuwa całkowicie wiersz z zadaniem z bazy."""
     arkusz = get_worksheet("Arkusz1")
     try:
         komorka = arkusz.find(str(id_zadania))
         if komorka:
             arkusz.delete_rows(komorka.row)
+            czysc_cache_glowny()
     except Exception as e:
         pass
 
 def archiwizuj_zadanie(id_zadania):
-    """Przenosi wiersz z głównego arkusza do zakładki 'Archiwum'."""
     arkusz = get_worksheet("Arkusz1")
     archiwum = get_worksheet("Archiwum")
     try:
@@ -74,11 +86,12 @@ def archiwizuj_zadanie(id_zadania):
             wiersz = arkusz.row_values(komorka.row)
             archiwum.append_row(wiersz)
             arkusz.delete_rows(komorka.row)
+            czysc_cache_glowny()
+            czysc_cache_archiwum()
     except Exception as e:
         pass
 
 def edytuj_zadanie(id_zadania, nowy_wiersz):
-    """Zastępuje dane wiersza nowymi wartościami na podstawie ID."""
     arkusz = get_worksheet("Arkusz1")
     try:
         komorka = arkusz.find(str(id_zadania))
@@ -87,13 +100,15 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
             for i, wartosc in enumerate(nowy_wiersz):
                 lista_komorek[i].value = str(wartosc)
             arkusz.update_cells(lista_komorek)
+            czysc_cache_glowny()
     except Exception as e:
         pass
 
+
 # --- FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
 
+@st.cache_data(ttl=300) # 5 minut cache, to się rzadko zmienia
 def pobierz_ustawienia_uzytkownika(uzytkownik):
-    """Pobiera opacity i blur dla konkretnego uzytkownika. Jesli brak, zwraca domyslne."""
     try:
         arkusz = get_worksheet("Ustawienia")
         rekordy = arkusz.get_all_records()
@@ -107,7 +122,6 @@ def pobierz_ustawienia_uzytkownika(uzytkownik):
     return 0.75, 4 
 
 def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
-    """Zapisuje lub aktualizuje ustawienia w arkuszu 'Ustawienia'."""
     try:
         arkusz = get_worksheet("Ustawienia")
         rekordy = arkusz.get_all_records()
@@ -124,13 +138,16 @@ def zapisz_ustawienia_uzytkownika(uzytkownik, opacity, blur):
         else:
             arkusz.append_row([str(uzytkownik), float(opacity), int(blur)])
             
+        pobierz_ustawienia_uzytkownika.clear() # Czyścimy cache ustawień po zapisie
+            
     except Exception as e:
         print(f"Błąd zapisu ustawień: {e}")
 
+
 # --- NOWE FUNKCJE: OBSŁUGA UŻYTKOWNIKÓW (LOGOWANIE) ---
 
+@st.cache_data(ttl=300) # 5 minut cache
 def pobierz_uzytkownikow():
-    """Pobiera listę użytkowników z arkusza 'Uzytkownicy' do autoryzacji."""
     try:
         sheet = get_worksheet("Uzytkownicy")
         zapisy = sheet.get_all_records()
@@ -140,12 +157,11 @@ def pobierz_uzytkownikow():
         return []
 
 def dodaj_nowego_uzytkownika(nowy_wiersz):
-    """Dodaje nowego użytkownika (Login, PIN, Rola) do arkusza 'Uzytkownicy'."""
     try:
         sheet = get_worksheet("Uzytkownicy")
-        # Formatujemy na stringi dla bezpieczeństwa przed wysłaniem
         wiersz_str = [str(x) for x in nowy_wiersz]
         sheet.append_row(wiersz_str)
+        pobierz_uzytkownikow.clear() # Czyścimy cache userów po dodaniu
     except Exception as e:
         print(f"Błąd dodawania użytkownika: {e}")
         raise e
