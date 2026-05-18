@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import database
-import config  
-import data_processing  # <--- IMPORT NOWEGO SILNIKA PRZETWARZANIA
+import data_processing
 
 def style_df(styler):
-    """Funkcja pomocnicza do stylizowania tabel dopasowana do ciemnego motywu"""
+    """Funkcja pomocnicza do stylizowania tabel dopasowana do ciemnego motywu."""
     styler.set_properties(**{'border-radius': '10px', 'background-color': 'transparent'})
     styler.set_table_styles([
         {'selector': 'th', 'props': [('background-color', 'rgba(0,0,0,0.2)'), ('color', '#f8fafc'), ('font-weight', 'bold'), ('text-transform', 'uppercase'), ('font-size', '0.75rem'), ('letter-spacing', '0.05em')]},
@@ -93,19 +92,24 @@ def pokaz_formularz():
     st.markdown('<div class="dashboard-header"><span class="dashboard-title-icon">➕</span><span class="dashboard-title">Rejestracja Zadań</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subheader">Wybierz odpowiednią zakładkę dla operacji magazynowej lub wyjazdu terenowego.</div>', unsafe_allow_html=True)
     
+    # --- DYNAMICZNE SŁOWNIKI Z BAZY DANYCH ---
+    slowniki = database.pobierz_slowniki()
+    lista_aut = slowniki.get("Auta", ["Brak aut w słowniku"])
+    lista_dzialow = slowniki.get("Działy", ["Rental", "Realizacja"])
+
     tab_wyjazd, tab_awizacja = st.tabs(["🚚 Zlecenie Wyjazdu (Dla Kierowcy)", "🏭 Awizacja Magazynowa (Klient u nas)"])
 
     # --- ZAKŁADKA 1: WYJAZDY ---
     with tab_wyjazd:
         with st.form("form_wyjazd", clear_on_submit=True):
-            st.info("💡 Formularz wygeneruje zadanie na panelu mobilnym kierowcy (Dawida).")
+            st.info("💡 Formularz wygeneruje zadanie na panelu mobilnym kierowcy.")
             col1, col2 = st.columns(2)
             with col1:
                 data = st.date_input("Data wyjazdu")
                 godzina = st.time_input("Godzina na miejscu")
-                dzial = st.selectbox("Dział", config.DZIALY)
+                dzial = st.selectbox("Dział", lista_dzialow)
                 typ_akcji = st.selectbox("Typ zadania", ["Dowóz do klienta", "Odbiór od klienta"])
-                auto = st.selectbox("Auto", config.LISTA_AUT)
+                auto = st.selectbox("Auto", lista_aut)
             with col2:
                 nr_projektu = st.text_input("Nr Projektu (opcjonalnie)")
                 klient = st.text_input("Klient (Firma) *", placeholder="Wymagane")
@@ -131,7 +135,7 @@ def pokaz_formularz():
             with col1:
                 data_awiz = st.date_input("Data przyjazdu klienta", key="d_a")
                 godzina_awiz = st.time_input("Szacowana godzina", key="g_a")
-                dzial_awiz = st.selectbox("Dział", config.DZIALY, key="dz_a")
+                dzial_awiz = st.selectbox("Dział", lista_dzialow, key="dz_a")
                 typ_akcji_awiz = st.selectbox("Co się dzieje na magazynie?", ["Klient odbiera sprzęt", "Klient zwraca sprzęt"])
             with col2:
                 nr_projektu_awiz = st.text_input("Nr Projektu (opcjonalnie)", key="p_a")
@@ -194,13 +198,17 @@ def pokaz_zarzadzanie():
             
             # --- SEKCJA: Pełna Edycja Danych ---
             st.markdown("### 📝 Pełna Edycja Danych")
+            
+            slowniki_edycja = database.pobierz_slowniki()
+            dzialy_edycja = slowniki_edycja.get("Działy", ["Rental", "Realizacja"])
+            
             with st.form("formularz_edycji"):
                 e_k1, e_k2 = st.columns(2)
                 with e_k1:
                     n_data = st.text_input("Data (RRRR-MM-DD)", value=str(wiersz['Data']))
                     n_godzina = st.text_input("Godzina", value=str(wiersz['Godzina']))
-                    dzial_idx = config.DZIALY.index(wiersz['Dział']) if wiersz['Dział'] in config.DZIALY else 0
-                    n_dzial = st.selectbox("Dział", config.DZIALY, index=dzial_idx)
+                    dzial_idx = dzialy_edycja.index(wiersz['Dział']) if wiersz['Dział'] in dzialy_edycja else 0
+                    n_dzial = st.selectbox("Dział", dzialy_edycja, index=dzial_idx)
                     n_klient = st.text_input("Klient", value=str(wiersz['Klient']))
                 with e_k2:
                     n_status = st.text_input("Status (Ręcznie)", value=str(wiersz['Status']))
@@ -253,7 +261,7 @@ def pokaz_magazyn():
     df_dzien = data_processing.pobierz_dane_na_dzien(wybrana_data)
 
     if df_dzien.empty:
-        st.success(f"Brak ruchów sprzętowych na {wybrana_data}.")
+        st.success(f"Brak ruchów sprzętowych na dzień {wybrana_data}.")
         return
 
     # Scentralizowany podział na Wydania vs Przyjęcia
