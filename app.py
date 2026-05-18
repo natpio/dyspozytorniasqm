@@ -238,11 +238,13 @@ else:
             )
             
             with st.expander("🎨 Parametry wizualne powłoki"):
+                # CALLBACKI DO NATYCHMIASTOWEJ SYNCHRONIZACJI WLOCIE
                 def aktualizuj_opacity():
                     st.session_state["bg_opacity"] = st.session_state["suwak_opacity"]
                 def aktualizuj_blur():
                     st.session_state["bg_blur"] = st.session_state["suwak_blur"]
 
+                # Suwaki z odizolowanymi kluczami zapobiegającymi resetom w tle
                 st.slider("Przezroczystość", 0.0, 1.0, value=float(st.session_state.get("bg_opacity", 0.55)), step=0.05, key="suwak_opacity", on_change=aktualizuj_opacity)
                 st.slider("Współczynnik Blur", 0, 20, value=int(st.session_state.get("bg_blur", 12)), step=1, key="suwak_blur", on_change=aktualizuj_blur)
                 
@@ -257,7 +259,6 @@ else:
             
         # --- PRAWY PANEL: MATRYCA INTERFEJSU (VIEWPORT) ---
         with col_viewport:
-            # USUNIĘTO WADLIWY KONTENER HTML WRAZ Z KLASĄ VIEWPORT-WRAPPER
             if st.session_state["aktywny_modul"] == "Control Tower":
                 ui_mapa.pokaz_mape()
             elif st.session_state["aktywny_modul"] == "Dashboard": 
