@@ -41,7 +41,7 @@ def zastosuj_style(opacity, blur):
         background-color: rgba(15, 23, 42, OPACITY_PLACEHOLDER) !important; 
         backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important; 
         -webkit-backdrop-filter: blur(BLUR_PLACEHOLDERpx) !important;
-        z-index: -1 !important; /* Gwarancja z-index: -1, tło ląduje POD spodem aplikacji */
+        z-index: -1 !important; /* Warstwa ląduje bezpiecznie POD spodem elementów klikalnych */
         pointer-events: none !important; 
     }
 
@@ -156,7 +156,7 @@ def zastosuj_style(opacity, blur):
     .stAlert p { color: #f8fafc !important; }
 
     /* ========================================= */
-    /* INTERAKTYWNE MENU RADIOWE (BŁYSKAWICZNE)  */
+    /* INTERAKTYWNE MENU RADIOWE                 */
     /* ========================================= */
     div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child { 
         position: absolute !important; opacity: 0 !important; width: 0px !important; height: 0px !important; margin: 0 !important; padding: 0 !important; pointer-events: none !important;
