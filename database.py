@@ -105,7 +105,7 @@ def edytuj_zadanie(id_zadania, nowy_wiersz):
         pass
 
 
-# --- FUNKCJE: OBSŁUGA USTAWIEŃ UI ---
+# --- TARCZA OCHRONNA USTAWIEŃ UI ---
 
 @st.cache_data(ttl=300)
 def pobierz_ustawienia_uzytkownika(uzytkownik):
