@@ -19,7 +19,7 @@ def pokaz_tablice():
 
     with tab_dzis:
         dzis = datetime.now().date()
-        renderuj_kanban_dla_daty(dzis, "Brak zaplanowanych zadań na dzisiaj. Można iść na kawę ☕")
+        renderuj_kanban_dla_daty(dzis, "Brak zaplanowanych zadań na dzisiaj. ☕")
 
     with tab_jutro:
         jutro = datetime.now().date() + timedelta(days=1)
