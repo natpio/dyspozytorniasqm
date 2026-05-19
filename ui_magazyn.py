@@ -23,7 +23,7 @@ def pokaz_tablice():
 
     with tab_jutro:
         jutro = datetime.now().date() + timedelta(days=1)
-        renderuj_kanban_dla_daty(jutro, "Brak zaplanowanych zadań na jutro. Spokojna końcówka zmiany. 👌")
+        renderuj_kanban_dla_daty(jutro, "Brak zaplanowanych zadań na jutro. 👌")
 
     with tab_kalendarz:
         st.markdown('<div style="margin-bottom:15px; color:#94a3b8;">Pełny podgląd nadchodzących awizacji i wydań. Kliknij zadanie, aby zobaczyć szczegóły.</div>', unsafe_allow_html=True)
