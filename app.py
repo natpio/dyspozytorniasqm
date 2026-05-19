@@ -72,7 +72,7 @@ if st.session_state["zalogowany"] is None:
     _, col_center, _ = st.columns([1, 1.2, 1])
     with col_center:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        st.markdown('<h1 style="margin-bottom: 10px; text-align:center; letter-spacing: -1px; color:#f8fafc;">🔐 SQM SYSTEM OS</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 style="margin-bottom: 10px; text-align:center; letter-spacing: -1px; color:#f8fafc;">🔐 SQM DYSPOZYTORNIA</h1>', unsafe_allow_html=True)
         
         if st.session_state["wybrane_konto"] is None:
             st.markdown('<p style="text-align:center; font-size:1.1rem; color:#cbd5e1; margin-bottom:30px;">Zidentyfikuj swój profil operatora</p>', unsafe_allow_html=True)
